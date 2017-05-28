@@ -4,22 +4,56 @@
 		<title>freenote</title>
 		<link href="https://fonts.googleapis.com/css?family=Lato:400,300,300italic,400italic,700,700italic|Work+Sans:400,300,200,700" rel="stylesheet" type="text/css" />
 		<link href="theme.css" rel="stylesheet" type="text/css" />
-		<script type="application/javascript" src="app.js"></script>
-		<script type="application/javascript" src="auth.js"></script>
+		<link href="font-awesome.min.css" rel="stylesheet" type="text/css" />
+		<script src="app.js" type="application/javascript"></script>
+		<script src="auth.js" type="application/javascript"></script>
+		<script src="notes.js" type="application/javascript"></script>
 	</head>
 	<body>
 		<h1 id="SiteTitle">freenote</h1>
-		<div id="StatusMessage"></div>
+		<section id="StatusMessage"></section>
 		<section id="Login" style="display:none">
 			<form id="LoginForm" onsubmit="return false">
-				<p><input id="UsernameField" placeholder="Username" /></p>
-				<p><input id="PasswordField" placeholder="Password" type="password" /></p>
-				<button onclick="Login()">Log In</button>
+				<p><input id="UsernameField" placeholder="Username" required/></p>
+				<p><input id="PasswordField" placeholder="Password" type="password" required/></p>
+				<p><button onclick="Login()">Log In</button></p>
 			</form>
 		</section>
-		<section id="User" style="display:none">
-			<p id="WhoAmI"></p>
-			<button id="Logout" onclick="Logout()">Log Out</button>
+		<section id="NoteManager" style="display:none">
+			<section id="NoteListPane">
+				<section id="User" style="display:none">
+					<p id="WhoAmI"></p>
+					<button id="Logout" onclick="Logout()">Log Out</button>
+					<button id="EditUser" onclick="EditUser()">Edit</button>
+				</section>
+				<!-- Search/Filter controls -->
+				<ol id="NoteList"></ol>
+			</section>
+			<section id="NotePane">
+				<h1 id="NoteTitle" contenteditable="true"></h1>
+				<nav id="ToolBar">
+					<ul id="ToolsList">
+						<li id="SaveButton" onclick="SaveNote()"><i class="fa fa-check"></i></li>
+					</ul>
+				</nav>
+				<article id="NoteBody" contenteditable="true"></article>
+			</section>
 		</section>
+		<footer id="Footer">
+			Freenote &copy;2017 Adrian Price.
+			<a href="https://github.com/aprice/freenote" target="_blank">Freenote on GitHub</a>
+		</footer>
+		<div id="EditUserModal" style="display:none">
+			<section id="EditUserPanel">
+				<form id="EditUserForm" onsubmit="return false">
+					<p><input id="NewPasswordField" placeholder="New Password" type="password" required minlength="8" maxlength="128"/></p>
+					<p><input id="ConfirmPasswordField" placeholder="Confirm Password" type="password" required minlength="8" maxlength="128"/></p>
+					<p>
+						<button onclick="SaveUser()">Save</button>
+						<button onclick="DismissUserModal()">Cancel</button>
+					</p>
+				</form>
+			</section>
+		</div>
 	</body>
 </html>

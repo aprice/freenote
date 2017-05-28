@@ -343,7 +343,7 @@ func (s *Server) doNote(rc requestContext, w http.ResponseWriter, r *http.Reques
 			return
 		}
 		w.Header().Add("Location", fmt.Sprintf("%s/users/%s/notes/%s", s.conf.BaseURI, rc.ownerID, note.ID))
-		sendResponse(w, r, decorateNote(rc.note, rc.note.Owner == rc.user.ID, s.conf), http.StatusOK)
+		sendResponse(w, r, decorateNote(*note, rc.note.Owner == rc.user.ID, s.conf), http.StatusOK)
 		return
 	case http.MethodDelete:
 	//TODO: Delete note

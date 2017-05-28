@@ -1,0 +1,9 @@
+{
+	"RootPath": "web",
+	"OutputPath": "web/embedded.go",
+	"BuildConstraints": "!dev",
+	"PackageName": "web",
+	"DevOutputPath": "web/embedded_dev.go",
+	"DevBuildConstraints": "dev",
+	"ExcludePattern": "(^\\.|\\.go$)"
+}

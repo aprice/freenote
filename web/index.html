@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>freenote</title>
+		<link href="https://fonts.googleapis.com/css?family=Lato:400,300,300italic,400italic,700,700italic|Work+Sans:400,300,200,700" rel="stylesheet" type="text/css" />
+		<link href="theme.css" rel="stylesheet" type="text/css" />
+		<script type="application/javascript" src="app.js"></script>
+		<script type="application/javascript" src="auth.js"></script>
+	</head>
+	<body>
+		<h1 id="SiteTitle">freenote</h1>
+		<div id="StatusMessage"></div>
+		<section id="Login" style="display:none">
+			<form id="LoginForm" onsubmit="return false">
+				<p><input id="UsernameField" placeholder="Username" /></p>
+				<p><input id="PasswordField" placeholder="Password" type="password" /></p>
+				<button onclick="Login()">Log In</button>
+			</form>
+		</section>
+		<section id="User" style="display:none">
+			<p id="WhoAmI"></p>
+			<button id="Logout" onclick="Logout()">Log Out</button>
+		</section>
+	</body>
+</html>

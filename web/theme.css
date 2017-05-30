@@ -98,6 +98,7 @@ a {
 #NotePane {
 	flex: 4 4 50em;
 	margin: 0 .5em;
+	padding-bottom: 1em;
 	border: 2pt solid #999;
 	border-radius: 1em;
 
@@ -116,6 +117,14 @@ a {
 	overflow: auto;
 	min-height: 5em;
 	flex: 1 1 5em;
+}
+
+#NoteBody.md-mode {
+	font-family: 'Source Code Pro', 'Lucida Console', 'Courier New', Courier, Monaco, monospace;
+}
+
+#NoteBody.html-mode {
+	font-family: Lato, Arial, Helvetica, sans-serif;
 }
 
 #ToolBar {

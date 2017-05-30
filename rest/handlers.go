@@ -303,6 +303,7 @@ func (s *Server) doNotes(rc requestContext, w http.ResponseWriter, r *http.Reque
 		if err = rc.db.NoteStore().SaveNote(note); handleError(w, err) {
 			return
 		}
+		w.Header().Add("Location", fmt.Sprintf("%s/users/%s/notes/%s", s.conf.BaseURI, rc.ownerID, note.ID))
 		sendResponse(w, r, decorateNote(*note, true, s.conf), http.StatusCreated)
 	default:
 		w.Header().Add("Allow", "GET, POST")
@@ -348,7 +349,6 @@ func (s *Server) doNote(rc requestContext, w http.ResponseWriter, r *http.Reques
 		if note.HTMLBody == "" && note.Body != "" {
 			rc.note.HTMLBody = string(blackfriday.MarkdownCommon([]byte(rc.note.Body)))
 		}
-		w.Header().Add("Location", fmt.Sprintf("%s/users/%s/notes/%s", s.conf.BaseURI, rc.ownerID, note.ID))
 		sendResponse(w, r, decorateNote(*note, rc.note.Owner == rc.user.ID, s.conf), http.StatusOK)
 		return
 	case http.MethodDelete:

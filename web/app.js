@@ -59,6 +59,7 @@ var App = {
 			var el = $el('<li id="note-'+note.id+'">'+note.title+'</li>');
 			if (note == this.currentNote) {
 				el.classList.add("selected");
+				this.currentNote.index = i;
 			}
 			this.noteList.appendChild(el);
 			el.note = note;
@@ -83,6 +84,8 @@ var App = {
 			this.noteManager.querySelectorAll("#SourceButton i.html-mode")[0].classList.remove("selected");
 			this.noteBody.innerText = this.currentNote.body;
 		}
+		this.noteBody.classList.remove("md-mode", "html-mode");
+		this.noteBody.classList.add(App.mode+"-mode");
 	},
 
 	log: function (data) {

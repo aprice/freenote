@@ -40,8 +40,6 @@ function SaveNote(cb) {
 		if (cb) cb();
 		return;
 	}
-	App.currentNote.title = App.noteTitle.innerText;
-	App.currentNote.body = App.noteBody.innerText;
 	var spinner = App.noteManager.querySelectorAll("#SaveButton .loader")[0];
 	spinner.style.display = "block";
 	var r = new XMLHttpRequest();
@@ -66,9 +64,13 @@ function SaveNote(cb) {
 		}
 		fade(spinner, 400);
 	};
+	App.currentNote.title = App.noteTitle.innerText;
+	App.currentNote.body = "";
+	App.currentNote.html = "";
+	if (App.mode == "md") App.currentNote.body = App.noteBody.innerText;
+	else App.currentNote.html = App.noteBody.innerHTML;
 	App.currentNote._links = null;
-	if (App.mode == "md") App.currentNote.html = "";
-	else App.currentNote.body = "";
+	App.log("Saving as "+App.mode);
 	r.send(JSON.stringify(App.currentNote));
 }
 

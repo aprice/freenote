@@ -6,6 +6,7 @@ body,input,select,button {
 
 h1,h2,h3,h4,h5,h6 {
 	font-family: 'Work Sans', Arial, Helvetica, sans-serif;
+	font-weight: 300;
 }
 
 body {
@@ -16,12 +17,16 @@ div,section,article {
 	box-sizing: border-box;
 }
 
+a {
+	text-decoration: none;
+}
+
 #SiteTitle {
 	font-weight: 200;
 	height: 10vh;
-	line-height: 0;
+	line-height: 10vh;
 	margin: 0;
-	padding: 1em;
+	padding: 0 1em;
 	box-sizing: border-box;
 }
 
@@ -95,17 +100,26 @@ div,section,article {
 	margin: 0 .5em;
 	border: 2pt solid #999;
 	border-radius: 1em;
+
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-start;
+	align-items: stretch;
 }
 
 #NoteTitle {
 	font-weight: 300;
+	flex: 0 0 1em;
 }
 
 #NoteBody {
 	overflow: auto;
+	min-height: 5em;
+	flex: 1 1 5em;
 }
 
 #ToolBar {
+	flex: 0 0 1em;
 	background-color: #fff;
 	border: 1pt solid #333;
 	border-left: none;
@@ -116,28 +130,67 @@ div,section,article {
 #ToolsList {
 	list-style-type: none;
 	margin: 0;
-	padding: 0;
+	padding: 0 .3em;
 	text-indent: 0;
 }
 
-#ToolsList li {
+#ToolsList li, .toolButton {
 	display: inline-block;
-	margin: 0 .3em;
-	padding: .2em .3em;
+	margin: 0 .2em;
+	padding: .2em;
 	box-sizing: border-box;
 	height: 1.8em;
+	min-width: 1em;
 	border: 1pt solid rgba(255,255,255,0);
 	/*border-radius: 6pt;
 	background: #ccc;*/
 }
 
-#ToolsList li:hover {
+#ToolsList li:hover, .toolButton:hover {
 	background-color: #9df;
 	border-color: #36f;
 }
 
-#SaveButton i {
+#SaveButton {
+	position: relative;
+}
+
+#SaveButton {
 	color: #0c1;
+}
+
+#SaveButton .loader {
+	z-index: 1;
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	padding-top: 2pt;
+	background-color: #fff;
+}
+
+#SourceButton .html-mode {
+	border-left: 1pt solid #000;
+	padding-left: 3pt;
+}
+
+#SourceButton .md-mode {
+	padding-right: 3pt;
+}
+
+#SourceButton i.selected {
+	color: #06f;
+}
+
+#DeleteButton {
+	color: #c00;
+}
+
+#ToolBar #DeleteButton:hover {
+	background-color: #fcc;
+	border-color: #c00;
 }
 
 #Footer {

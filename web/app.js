@@ -1,5 +1,12 @@
 var $ = document.querySelectorAll.bind(document);
 var $id = document.getElementById.bind(document);
+function fade(el,ms,step) {
+	if (!step) el.style.opacity = 1;
+	if ((el.style.opacity -= .05) <= 0)
+		el.style.display = "none";
+	else
+		setTimeout(function(){fade(el,ms,true)}, ms * .05);
+}
 function $el(html) {
 	var tpl = document.createElement('template');
 	tpl.innerHTML = html;
@@ -11,6 +18,7 @@ var App = {
 	user: null,
 	notes: null,
 	currentNote: null,
+	mode: "md",
 
 	init: function () {
 		this.userPanel = $id("User");
@@ -66,7 +74,15 @@ var App = {
 			return;
 		}
 		this.noteTitle.innerText = this.currentNote.title;
-		this.noteBody.innerText = this.currentNote.body;
+		if (this.mode == "html") {
+			this.noteManager.querySelectorAll("#SourceButton i.html-mode")[0].classList.add("selected");
+			this.noteManager.querySelectorAll("#SourceButton i.md-mode")[0].classList.remove("selected");
+			this.noteBody.innerHTML = this.currentNote.html;
+		} else {
+			this.noteManager.querySelectorAll("#SourceButton i.md-mode")[0].classList.add("selected");
+			this.noteManager.querySelectorAll("#SourceButton i.html-mode")[0].classList.remove("selected");
+			this.noteBody.innerText = this.currentNote.body;
+		}
 	},
 
 	log: function (data) {
@@ -95,7 +111,7 @@ var App = {
 		var s = this.messagePanel.style;
 		var fade = function() {(s.opacity -= .05) <= 0 ? s.display = "none" : setTimeout(fade, 40)};
 		s.opacity = 1;
-		setTimeout(fade, 3000);
+		setTimeout(function(){fade(this.messagePanel, 800), 3000});
 	},
 
 	userPanel: null,

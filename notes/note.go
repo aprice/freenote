@@ -15,4 +15,5 @@ type Note struct {
 	Modified time.Time `json:"modified" xml:"Meta>Modified" storm:"index"`
 	Tags     []string  `json:"tags" xml:"Meta>Tags>Tag,omitempty" storm:"index"`
 	Body     string    `json:"body"`
+	HTMLBody string    `json:"html" xml:"html"`
 }

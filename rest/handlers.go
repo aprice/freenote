@@ -7,11 +7,13 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/russross/blackfriday"
 	uuid "github.com/satori/go.uuid"
 
 	"github.com/aprice/freenote/notes"
 	"github.com/aprice/freenote/page"
 	"github.com/aprice/freenote/users"
+	"github.com/lunny/html2md"
 )
 
 // session
@@ -233,8 +235,7 @@ func (s *Server) doPassword(rc requestContext, w http.ResponseWriter, r *http.Re
 		if handleError(w, err) {
 			return
 		}
-		err = rc.db.UserStore().SaveUser(&rc.owner)
-		if handleError(w, err) {
+		if err = rc.db.UserStore().SaveUser(&rc.owner); handleError(w, err) {
 			return
 		}
 		w.WriteHeader(http.StatusOK)
@@ -299,7 +300,6 @@ func (s *Server) doNotes(rc requestContext, w http.ResponseWriter, r *http.Reque
 				return
 			}
 		}
-		err = rc.db.NoteStore().SaveNote(note)
 		if err = rc.db.NoteStore().SaveNote(note); handleError(w, err) {
 			return
 		}
@@ -322,12 +322,13 @@ func (s *Server) doNote(rc requestContext, w http.ResponseWriter, r *http.Reques
 			statusResponse(w, http.StatusForbidden)
 			return
 		}
+		rc.note.HTMLBody = string(blackfriday.MarkdownCommon([]byte(rc.note.Body)))
 		//TODO: text/markdown, text/plain Accept support & front matter addition
 		sendResponse(w, r, decorateNote(rc.note, rc.note.Owner == rc.user.ID, s.conf), http.StatusOK)
 	case http.MethodPut:
 		//TODO: Conflict checking (etag, modified, etc)
 		//TODO: Sharing
-		//TODO: text/markdown, text/plain Content-Type support & front matter parsing
+		//TODO: text/markdown, text/plain, text/html Content-Type support & front matter parsing
 		note := new(notes.Note)
 		var err error
 		if err = parseRequest(r, note); badRequest(w, err) {
@@ -338,9 +339,14 @@ func (s *Server) doNote(rc requestContext, w http.ResponseWriter, r *http.Reques
 			http.Error(w, "Bad Request: cant't change ID", http.StatusBadRequest)
 			return
 		}
-		err = rc.db.NoteStore().SaveNote(note)
+		if note.Body == "" && note.HTMLBody != "" {
+			note.Body = html2md.Convert(note.HTMLBody)
+		}
 		if err = rc.db.NoteStore().SaveNote(note); handleError(w, err) {
 			return
+		}
+		if note.HTMLBody == "" && note.Body != "" {
+			rc.note.HTMLBody = string(blackfriday.MarkdownCommon([]byte(rc.note.Body)))
 		}
 		w.Header().Add("Location", fmt.Sprintf("%s/users/%s/notes/%s", s.conf.BaseURI, rc.ownerID, note.ID))
 		sendResponse(w, r, decorateNote(*note, rc.note.Owner == rc.user.ID, s.conf), http.StatusOK)

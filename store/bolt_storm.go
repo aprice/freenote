@@ -63,10 +63,13 @@ func (s *StormNoteStore) NotesByFolder(userID uuid.UUID, folder string, page pag
 }
 
 func (s *StormNoteStore) SaveNote(note *notes.Note) error {
+	h := note.HTMLBody
+	note.HTMLBody = ""
 	err := s.db.Save(note)
 	if err == storm.ErrAlreadyExists {
 		err = s.db.Update(note)
 	}
+	note.HTMLBody = h
 	return err
 }
 

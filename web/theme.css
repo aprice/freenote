@@ -30,16 +30,19 @@ a {
 	box-sizing: border-box;
 }
 
-#StatusMessage {
+#StatusMessage,#Confirmation {
     position: fixed;
     z-index: 1;
     left: 0;
     top: 0;
     width: 100%;
-    height: 4rem;
+    min-height: 4rem;
     overflow: auto;
 	margin: 0;
 	padding: 1rem 10%;
+}
+
+#StatusMessage {
 	background-color: rgba(0, 255, 20, .8);
 	border-bottom: 3pt solid rgb(0,140,10);
 }
@@ -47,6 +50,21 @@ a {
 #StatusMessage.error {
 	background-color: rgba(255, 0, 0, .8);
 	border-bottom-color: rgb(150,0,0);
+}
+
+#Confirmation {
+	background-color: rgba(255, 50, 5, .8);
+	border-bottom-color: rgb(130,20,0);
+}
+
+#Confirmation .confirmButton:hover {
+	background-color: #cfc;
+	border-color: #0c0;
+}
+
+#Confirmation .cancelButton:hover {
+	background-color: #fcc;
+	border-color: #c00;
 }
 
 #User {
@@ -58,11 +76,11 @@ a {
 	flex-direction: row;
 	justify-content: space-around;
 	align-items: stretch;
-	/*margin: 1em 0;*/
-	padding: 1em;
-	width: 100%;
+	margin: 0 1em;
+	width: calc(100%-1em);
 	height: 80vh;
 
+	border: 2pt solid #999;
 	border-radius: 1em;
 	background-color: #eee;
 }
@@ -70,8 +88,6 @@ a {
 #NoteListPane {
 	flex: 1 1 10em;
 	margin: 0 .5em;
-	border: 2pt solid #999;
-	border-radius: 1em;
 	overflow-y: auto;
 }
 
@@ -80,6 +96,15 @@ a {
 	margin: 0;
 	padding: 0;
 	text-indent: 0;
+}
+
+#NoteListPane h2 {
+	position: relative;
+}
+
+#NewNoteButton {
+	position: absolute;
+	right: 0;
 }
 
 #NoteList li {
@@ -97,9 +122,8 @@ a {
 
 #NotePane {
 	flex: 4 4 50em;
-	margin: 0 .5em;
 	padding-bottom: 1em;
-	border: 2pt solid #999;
+	border-left: 2pt solid #999;
 	border-radius: 1em;
 
 	display: flex;

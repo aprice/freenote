@@ -1,37 +1,25 @@
 function LoadNotes() {
-	var r = new XMLHttpRequest();
-	r.open("GET", "/users/"+App.user.id+"/notes", true);
-	r.onreadystatechange = function () {
-		if (r.readyState != 4) return;
-		if (r.status < 400) {
-			App.log("Success: " + r.responseText);
-			App.notes = JSON.parse(r.responseText).notes;
+	App.rest({
+		url: "/users/" + App.user.id + "/notes",
+		success: function(payload) {
+			App.notes = payload.notes;
 			App.noteListRefresh();
-		} else {
-			App.error("Getting note list failed: " + r.responseText);
 		}
-	};
-	r.send();
+	});
 }
 
 function SelectNote(note) {
 	SaveNote(function() {
-		var r = new XMLHttpRequest();
-		r.open("GET", "/users/" + App.user.id + "/notes/" + note.id, true);
-		r.onreadystatechange = function () {
-			if (r.readyState != 4) return;
-			if (r.status < 400) {
-				App.log("Success: " + r.responseText);
-				App.currentNote = JSON.parse(r.responseText);
+		App.rest({
+			url: "/users/" + App.user.id + "/notes/" + note.id,
+			success: function(payload) {
+				App.currentNote = payload;
 				App.currentNote.index = note.index;
 				App.notes[note.index] = App.currentNote;
 				App.noteRefresh();
 				App.noteListRefresh();
-			} else {
-				App.error("Getting note list failed: " + r.responseText);
 			}
-		};
-		r.send();
+		})
 	});
 }
 
@@ -40,38 +28,33 @@ function SaveNote(cb) {
 		if (cb) cb();
 		return;
 	}
-	var spinner = App.noteManager.querySelectorAll("#SaveButton .loader")[0];
+	var spinner = $1("#SaveButton .loader", App.noteManager);
 	spinner.style.display = "block";
-	var r = new XMLHttpRequest();
-	if (App.currentNote.id)
-		r.open("PUT", "/users/" + App.user.id + "/notes/" + App.currentNote.id, true);
-	else
-		r.open("POST", "/users/" + App.user.id + "/notes", true);
-	r.setRequestHeader("Content-Type", "application/json");
-	r.onreadystatechange = function () {
-		if (r.readyState != 4) return;
-		if (r.status < 400) {
-			App.log("Success: " + r.responseText);
-			idx = App.currentNote.index;
-			App.currentNote = JSON.parse(r.responseText);
-			App.currentNote.index = idx;
-			App.notes[idx] = App.currentNote;
+	var note = App.currentNote;
+	note.title = App.noteTitle.innerText;
+	note.body = "";
+	note.html = "";
+	if (App.mode == "md") note.body = App.noteBody.innerText;
+	else note.html = App.noteBody.innerHTML;
+	note._links = null;
+	App.rest({
+		method: note.id ? "PUT" : "POST",
+		url: note.id
+			? "/users/" + App.user.id + "/notes/" + note.id
+			: "/users/" + App.user.id + "/notes",
+		payload: note,
+		success: function(payload) {
+			App.currentNote = payload;
+			App.currentNote.index = note.index;
+			App.notes[note.index] = App.currentNote;
 			App.noteRefresh();
 			App.noteListRefresh();
 			if (cb) cb();
-		} else {
-			App.error("Getting note list failed: " + r.responseText);
+		},
+		finally: function() {
+			fade(spinner, 300);
 		}
-		fade(spinner, 400);
-	};
-	App.currentNote.title = App.noteTitle.innerText;
-	App.currentNote.body = "";
-	App.currentNote.html = "";
-	if (App.mode == "md") App.currentNote.body = App.noteBody.innerText;
-	else App.currentNote.html = App.noteBody.innerHTML;
-	App.currentNote._links = null;
-	App.log("Saving as "+App.mode);
-	r.send(JSON.stringify(App.currentNote));
+	});
 }
 
 function NewNote() {

@@ -1,11 +1,20 @@
-var $ = document.querySelectorAll.bind(document);
+// general-purpose utilities
 var $id = document.getElementById.bind(document);
+function $(qry,el=null) {
+	el = el || document;
+	return el.querySelectorAll(qry);
+}
+function $1(qry,el=null) {
+	return $(qry,el)[0];
+}
 function fade(el,ms,step) {
 	if (!step) el.style.opacity = 1;
-	if ((el.style.opacity -= .05) <= 0)
+	if ((el.style.opacity -= .05) <= 0) {
 		el.style.display = "none";
-	else
+		el.style.opacity = 1;
+	} else {
 		setTimeout(function(){fade(el,ms,true)}, ms * .05);
+	}
 }
 function $el(html) {
 	var tpl = document.createElement('template');
@@ -13,6 +22,7 @@ function $el(html) {
 	return tpl.content.firstChild;
 }
 
+// core app state & helpers
 var App = {
 	debug: true,
 	user: null,
@@ -28,6 +38,7 @@ var App = {
 		this.noteList = $id("NoteList");
 		this.noteTitle = $id("NoteTitle");
 		this.noteBody = $id("NoteBody");
+		this.confirmationPanel = $id("Confirmation");
 	},
 
 	userRefresh: function () {
@@ -76,12 +87,12 @@ var App = {
 		}
 		this.noteTitle.innerText = this.currentNote.title;
 		if (this.mode == "html") {
-			this.noteManager.querySelectorAll("#SourceButton i.html-mode")[0].classList.add("selected");
-			this.noteManager.querySelectorAll("#SourceButton i.md-mode")[0].classList.remove("selected");
+			$1("#SourceButton i.html-mode", this.noteManager).classList.add("selected");
+			$1("#SourceButton i.md-mode", this.noteManager).classList.remove("selected");
 			this.noteBody.innerHTML = this.currentNote.html;
 		} else {
-			this.noteManager.querySelectorAll("#SourceButton i.md-mode")[0].classList.add("selected");
-			this.noteManager.querySelectorAll("#SourceButton i.html-mode")[0].classList.remove("selected");
+			$1("#SourceButton i.md-mode", this.noteManager).classList.add("selected");
+			$1("#SourceButton i.html-mode", this.noteManager).classList.remove("selected");
 			this.noteBody.innerText = this.currentNote.body;
 		}
 		this.noteBody.classList.remove("md-mode", "html-mode");
@@ -95,31 +106,65 @@ var App = {
 	},
 
 	message: function (message, isHtml = false) {
-		if (isHtml) this.messagePanel.innerHTML = message;
-		else this.messagePanel.innerText = message;
-		this.messagePanel.cssClass = "";
-		this.messagePanel.style.display = "block";
-		this.fadeMessage();
+		var mp = this.messagePanel;
+		if (isHtml) mp.innerHTML = message;
+		else mp.innerText = message;
+		mp.cssClass = "";
+		mp.style.display = "block";
+		setTimeout(function () { fade(mp, 800), 3000 });
 	},
 
 	error: function (message, isHtml = false) {
-		if (isHtml) this.messagePanel.innerHTML = message;
-		else this.messagePanel.innerText = message;
-		this.messagePanel.cssClass = "error";
-		this.messagePanel.style.display = "block";
-		this.fadeMessage();
+		var mp = this.messagePanel;
+		if (isHtml) mp.innerHTML = message;
+		else mp.innerText = message;
+		mp.cssClass = "error";
+		mp.style.display = "block";
+		setTimeout(function () { fade(mp, 800), 3000 });
 	},
 
-	fadeMessage: function() {
-		var s = this.messagePanel.style;
-		var fade = function() {(s.opacity -= .05) <= 0 ? s.display = "none" : setTimeout(fade, 40)};
-		s.opacity = 1;
-		setTimeout(function(){fade(this.messagePanel, 800), 3000});
+	confirm: function(message, isHtml = false, confirmCB = null, cancelCB = null) {
+		var cp = this.confirmationPanel;
+		if (isHtml) $1(".message", cp).innerHTML = message;
+		else $1(".message", cp).innerText = message;
+		cp.style.display = "block";
+		$1(".confirmButton", cp).onclick = function() {
+			fade(cp, 600);
+			if (confirmCB) confirmCB();
+		};
+		$1(".cancelButton", cp).onclick = function () {
+			fade(cp, 600);
+			if (cancelCB) cancelCB();
+		};
+	},
+
+	rest: function(options) {
+		var r = new XMLHttpRequest();
+		options.method = options.method || "GET";
+		r.open(options.method, options.url, true);
+		r.setRequestHeader("Accept", "application/json");
+		r.onreadystatechange = function () {
+			if (r.readyState != 4) return;
+			if (r.status < 400) {
+				App.log("Success: " + r.responseText);
+				if (options.success) options.success(JSON.parse(r.responseText));
+			} else {
+				App.error("Request failed: " + r.responseText);
+				if (options.failed) options.failed();
+			}
+			if (options.finally) options.finally();
+		};
+		if (options.payload) options.body = JSON.stringify(options.payload);
+		options.ctype = options.ctype || "application/json";
+		if (options.body) r.setRequestHeader("Content-Type", options.ctype);
+		App.log("Sending " + options.method + " " + options.url + ": " + JSON.stringify(App.currentNote));
+		r.send(options.body);
 	},
 
 	userPanel: null,
 	loginPanel: null,
 	messagePanel: null,
+	confirmationPanel: null,
 	noteManager: null,
 	noteList: null,
 	noteTitle: null,

@@ -11,7 +11,14 @@
 	</head>
 	<body>
 		<h1 id="SiteTitle">freenote</h1>
-		<section id="StatusMessage"></section>
+		<section id="StatusMessage" style="display:none"></section>
+		<section id="Confirmation" style="display:none">
+			<p class="message"></p>
+			<p>
+				<a class="confirmButton toolButton" onclick="Confirmed()"><i class="fa fa-fw fa-thumbs-o-up"></i>Confirm</a>
+				<a class="cancelButton toolButton" onclick="Cancelled()"><i class="fa fa-fw fa-thumbs-o-down"></i>Cancel</a>
+			</p>
+		</section>
 		<section id="Login" style="display:none">
 			<form id="LoginForm" onsubmit="return false">
 				<p><input id="UsernameField" placeholder="Username" required/></p>

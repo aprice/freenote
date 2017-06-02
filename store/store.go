@@ -34,7 +34,7 @@ type NoteStore interface {
 	//Tags(userID uuid.UUID, page page.Page) ([]string, error)
 	//Search(userID uuid.UUID, query string, page page.Page) ([]notes.Note, error)
 	SaveNote(note *notes.Note) error
-	DeleteNote(note notes.Note) error
+	DeleteNote(id uuid.UUID) error
 }
 
 // UserStore implementations handle access to the backing store for users.
@@ -43,7 +43,7 @@ type UserStore interface {
 	UserByName(username string) (users.User, error)
 	Users(page page.Page) ([]users.User, error)
 	SaveUser(user *users.User) error
-	DeleteUser(user users.User) error
+	DeleteUser(id uuid.UUID) error
 }
 
 func NewSession(conf config.Config) (Session, error) {

@@ -44,7 +44,7 @@ a {
 
 #StatusMessage {
 	background-color: rgba(0, 255, 20, .8);
-	border-bottom: 3pt solid rgb(0,140,10);
+	border-bottom: .25em solid rgb(0,140,10);
 }
 
 #StatusMessage.error {
@@ -76,11 +76,11 @@ a {
 	flex-direction: row;
 	justify-content: space-around;
 	align-items: stretch;
-	margin: 0 1em;
-	width: calc(100%-1em);
+	margin: 0 1vw;
+	width: calc(100% - 2vw);
 	height: 80vh;
 
-	border: 2pt solid #999;
+	border: .16em solid #999;
 	border-radius: 1em;
 	background-color: #eee;
 }
@@ -108,7 +108,7 @@ a {
 }
 
 #NoteList li {
-	border-bottom: 1pt solid #000;
+	border-bottom: .08em solid #000;
 	padding: 1em;
 }
 
@@ -123,7 +123,7 @@ a {
 #NotePane {
 	flex: 4 4 50em;
 	padding-bottom: 1em;
-	border-left: 2pt solid #999;
+	border-left: .16em solid #999;
 	border-radius: 1em;
 
 	display: flex;
@@ -154,7 +154,7 @@ a {
 #ToolBar {
 	flex: 0 0 1em;
 	background-color: #fff;
-	border: 1pt solid #333;
+	border: .08em solid #333;
 	border-left: none;
 	border-right: none;
 	padding: .2em 0;
@@ -174,8 +174,8 @@ a {
 	box-sizing: border-box;
 	height: 1.8em;
 	min-width: 1em;
-	border: 1pt solid rgba(255,255,255,0);
-	/*border-radius: 6pt;
+	border: .08em solid rgba(255,255,255,0);
+	/*border-radius: .5em;
 	background: #ccc;*/
 }
 
@@ -200,17 +200,17 @@ a {
 	width: 100%;
 	height: 100%;
 	margin: 0;
-	padding-top: 2pt;
+	padding-top: .16em;
 	background-color: #fff;
 }
 
 #SourceButton .html-mode {
-	border-left: 1pt solid #000;
-	padding-left: 3pt;
+	border-left: .08em solid #000;
+	padding-left: .25em;
 }
 
 #SourceButton .md-mode {
-	padding-right: 3pt;
+	padding-right: .25em;
 }
 
 #SourceButton i.selected {
@@ -247,7 +247,7 @@ a {
 
 #EditUserPanel {
 	background-color: #fff;
-	border: 2pt solid #333;
+	border: .16em solid #333;
 	width: 50%;
 	min-width: 10em;
 	margin: 3em auto;

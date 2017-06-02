@@ -2,6 +2,7 @@ package store
 
 import (
 	"github.com/asdine/storm"
+	"github.com/asdine/storm/q"
 	uuid "github.com/satori/go.uuid"
 
 	"github.com/aprice/freenote/config"
@@ -73,8 +74,8 @@ func (s *StormNoteStore) SaveNote(note *notes.Note) error {
 	return err
 }
 
-func (s *StormNoteStore) DeleteNote(note notes.Note) error {
-	err := s.db.DeleteStruct(note)
+func (s *StormNoteStore) DeleteNote(id uuid.UUID) error {
+	err := s.db.Select(q.Eq("ID", id)).Delete(new(notes.Note))
 	return stormError(err)
 }
 
@@ -109,8 +110,8 @@ func (s *StormUserStore) SaveUser(user *users.User) error {
 	return err
 }
 
-func (s *StormUserStore) DeleteUser(user users.User) error {
-	err := s.db.DeleteStruct(user)
+func (s *StormUserStore) DeleteUser(id uuid.UUID) error {
+	err := s.db.Select(q.Eq("ID", id)).Delete(new(users.User))
 	return stormError(err)
 }
 

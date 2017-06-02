@@ -8,6 +8,7 @@
  - notes: note model and handling
  - page: pagination model and handling
  - rest: REST API handler and helpers
+ - stats: stats measurement for expvar
  - store: backing store handlers
  - users: user account model and handling
  - web: UI content files (HTML/CSS/JS)
@@ -41,6 +42,11 @@ hypermedia.go handles decorating response objects with link collections prior to
 marshaling, and includes helpers for generating the most common link relations.
 
 notes.go and users.go contain helpers for decorating users and notes, respectively.
+
+debug.go contains a stub handler for `/debug` that always returns 404 and only
+runs if neither the `debug` nor `dev` build tags are supplied. If either is
+supplied, debug_dev.go will run instead, which routes handlers for expvar and
+pprof.
 
 ## Backing Store
 Only two types of data are in the backing store, users and notes. These can be

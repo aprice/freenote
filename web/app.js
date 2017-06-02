@@ -81,10 +81,14 @@ var App = {
 
 	noteRefresh: function() {
 		if (this.user == null || this.currentNote == null) {
+			this.noteManager.classList.add("noneSelected");
+			this.noteManager.classList.remove("noteSelected");
 			this.noteTitle.innerHTML = "";
 			this.noteBody.innerHTML = "";
 			return;
 		}
+		this.noteManager.classList.add("noteSelected");
+		this.noteManager.classList.remove("noneSelected");
 		this.noteTitle.innerText = this.currentNote.title;
 		if (this.mode == "html") {
 			$1("#SourceButton i.html-mode", this.noteManager).classList.add("selected");
@@ -147,7 +151,11 @@ var App = {
 			if (r.readyState != 4) return;
 			if (r.status < 400) {
 				App.log("Success: " + r.responseText);
-				if (options.success) options.success(JSON.parse(r.responseText));
+				var payload = null;
+				if (r.responseText && r.getResponseHeader("Content-Type") == "application/json") {
+					payload = JSON.parse(r.responseText);
+				}
+				if (options.success) options.success(payload);
 			} else {
 				App.error("Request failed: " + r.responseText);
 				if (options.failed) options.failed();
@@ -157,7 +165,7 @@ var App = {
 		if (options.payload) options.body = JSON.stringify(options.payload);
 		options.ctype = options.ctype || "application/json";
 		if (options.body) r.setRequestHeader("Content-Type", options.ctype);
-		App.log("Sending " + options.method + " " + options.url + ": " + JSON.stringify(App.currentNote));
+		App.log("Sending " + options.method + " " + options.url + ": " + JSON.stringify(options.body));
 		r.send(options.body);
 	},
 

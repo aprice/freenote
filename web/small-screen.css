@@ -1,0 +1,44 @@
+@media (max-height: 50em) {
+	#SiteTitle, #Footer {
+		height: 2rem;
+		line-height: 2rem;
+	}
+
+	#SiteTitle {
+		font-size: 2rem;
+	}
+
+	#NoteManager {
+		height: calc(100% - 3rem);
+	}
+
+
+	#Footer {
+		height: 1rem;
+		line-height: 1rem;
+		font-size: .8rem;
+	}
+}
+
+@media (max-width: 40em) {
+	#NotePane {
+		border: none;
+	}
+
+	.noteSelected #NoteListPane {
+		display: none;
+	}
+
+	.noteSelected #BackButton {
+		display: inline-block !important;
+		padding-right: .5em;
+	}
+
+	.noneSelected #NotePane {
+		display: none;
+	}
+
+	#Footer {
+		font-size: .8rem;
+	}
+}

@@ -352,7 +352,10 @@ func (s *Server) doNote(rc requestContext, w http.ResponseWriter, r *http.Reques
 		sendResponse(w, r, decorateNote(*note, rc.note.Owner == rc.user.ID, s.conf), http.StatusOK)
 		return
 	case http.MethodDelete:
-	//TODO: Delete note
+		if err := rc.db.NoteStore().DeleteNote(rc.noteID); handleError(w, err) {
+			return
+		}
+		statusResponse(w, http.StatusNoContent)
 	default:
 		w.Header().Add("Allow", "GET, PUT, DELETE")
 		statusResponse(w, http.StatusMethodNotAllowed)

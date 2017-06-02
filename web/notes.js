@@ -10,6 +10,12 @@ function LoadNotes() {
 
 function SelectNote(note) {
 	SaveNote(function() {
+		if (note == null) {
+			App.currentNote = null;
+			App.noteRefresh();
+			App.noteListRefresh();
+			return;
+		}
 		App.rest({
 			url: "/users/" + App.user.id + "/notes/" + note.id,
 			success: function(payload) {
@@ -19,7 +25,7 @@ function SelectNote(note) {
 				App.noteRefresh();
 				App.noteListRefresh();
 			}
-		})
+		});
 	});
 }
 
@@ -73,7 +79,18 @@ function NewNote() {
 
 function DeleteNote() {
 	// TODO: confirmation modal
-
+	App.confirm("Are you sure you want to delete this note?", false, function() {
+		App.rest({
+			method: "DELETE",
+			url: "/users/" + App.user.id + "/notes/" + App.currentNote.id,
+			success: function (payload) {
+				App.notes.splice(App.currentNote.index, 1);
+				App.currentNote = null;
+				App.noteRefresh();
+				App.noteListRefresh();
+			}
+		});
+	});
 }
 
 function SwitchSourceView() {

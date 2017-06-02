@@ -131,8 +131,8 @@ func (s *MongoNoteStore) SaveNote(note *notes.Note) error {
 	return mongoError(err)
 }
 
-func (s *MongoNoteStore) DeleteNote(note notes.Note) error {
-	err := s.c.Remove(bson.M{"_id": note.ID})
+func (s *MongoNoteStore) DeleteNote(id uuid.UUID) error {
+	err := s.c.Remove(bson.M{"_id": id})
 	return mongoError(err)
 }
 
@@ -172,8 +172,8 @@ func (s *MongoUserStore) SaveUser(user *users.User) error {
 	return mongoError(err)
 }
 
-func (s *MongoUserStore) DeleteUser(user users.User) error {
-	err := s.c.Remove(bson.M{"_id": user.ID})
+func (s *MongoUserStore) DeleteUser(id uuid.UUID) error {
+	err := s.c.Remove(bson.M{"_id": id})
 	return mongoError(err)
 }
 

@@ -115,7 +115,7 @@ var App = {
 		else mp.innerText = message;
 		mp.cssClass = "";
 		mp.style.display = "block";
-		setTimeout(function () { fade(mp, 800), 3000 });
+		setTimeout(function () { fade(mp, 800) }, 3000);
 	},
 
 	error: function (message, isHtml = false) {
@@ -124,7 +124,7 @@ var App = {
 		else mp.innerText = message;
 		mp.cssClass = "error";
 		mp.style.display = "block";
-		setTimeout(function () { fade(mp, 800), 3000 });
+		setTimeout(function () { fade(mp, 800) }, 3000 );
 	},
 
 	confirm: function(message, isHtml = false, confirmCB = null, cancelCB = null) {
@@ -162,7 +162,10 @@ var App = {
 			}
 			if (options.finally) options.finally();
 		};
-		if (options.payload) options.body = JSON.stringify(options.payload);
+		if (options.payload) {
+			if (options.payload['_links']) delete (options.payload['_links']);
+			options.body = JSON.stringify(options.payload);
+		}
 		options.ctype = options.ctype || "application/json";
 		if (options.body) r.setRequestHeader("Content-Type", options.ctype);
 		App.log("Sending " + options.method + " " + options.url + ": " + JSON.stringify(options.body));

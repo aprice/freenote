@@ -40,9 +40,9 @@ function SaveNote(cb) {
 	note.title = App.noteTitle.innerText;
 	note.body = "";
 	note.html = "";
+	note.modified = new Date();
 	if (App.mode == "md") note.body = App.noteBody.innerText;
 	else note.html = App.noteBody.innerHTML;
-	note._links = null;
 	App.rest({
 		method: note.id ? "PUT" : "POST",
 		url: note.id
@@ -69,7 +69,9 @@ function NewNote() {
 			index: App.notes.length,
 			title: "Untitled note",
 			body: "",
-			html: ""
+			html: "",
+			created: new Date(),
+			modified: new Date()
 		};
 		App.notes.push(App.currentNote);
 		App.noteRefresh();

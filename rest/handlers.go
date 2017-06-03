@@ -352,7 +352,7 @@ func (s *Server) doNote(rc requestContext, w http.ResponseWriter, r *http.Reques
 			return
 		}
 		if note.HTMLBody == "" && note.Body != "" {
-			rc.note.HTMLBody = string(blackfriday.MarkdownCommon([]byte(rc.note.Body)))
+			note.HTMLBody = string(blackfriday.MarkdownCommon([]byte(note.Body)))
 		}
 		sendResponse(w, r, decorateNote(*note, rc.note.Owner == rc.user.ID, s.conf), http.StatusOK)
 		return

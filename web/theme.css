@@ -151,6 +151,36 @@ a {
 	font-family: Lato, Arial, Helvetica, sans-serif;
 }
 
+#NoteBody.html-mode h1,#NoteBody.html-mode h2,#NoteBody.html-mode h3,#NoteBody.html-mode h4,#NoteBody.html-mode h5,#NoteBody.html-mode h6 {
+	font-family: Lato, Arial, Helvetica, sans-serif;
+	font-weight: bold;
+	margin: .66em 0;
+}
+
+#NoteBody.html-mode h1 {
+	font-size: 200%;
+}
+
+#NoteBody.html-mode h2 {
+	font-size: 180%;
+}
+
+#NoteBody.html-mode h3 {
+	font-size: 160%;
+}
+
+#NoteBody.html-mode h4 {
+	font-size: 140%;
+}
+
+#NoteBody.html-mode h5 {
+	font-size: 120%;
+}
+
+#NoteBody.html-mode h6 {
+	font-size: 200%;
+}
+
 #ToolBar {
 	flex: 0 0 1em;
 	background-color: #fff;

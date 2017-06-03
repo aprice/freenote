@@ -3,15 +3,14 @@ package rest
 import (
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"net/http"
 	"regexp"
-	"strings"
 	"time"
+
+	uuid "github.com/satori/go.uuid"
 
 	"github.com/aprice/freenote/store"
 	"github.com/aprice/freenote/users"
-	uuid "github.com/satori/go.uuid"
 )
 
 var errNoAuth = errors.New("no authentication provided")
@@ -41,21 +40,21 @@ func (s *Server) authenticate(w http.ResponseWriter, r *http.Request, us store.U
 		} else {
 			return user, nil
 		}
-	} else if userID, sessID, err := parseSessionCookie(r); err != http.ErrNoCookie {
+	} else if sess, err := parseSessionCookie(r); err != http.ErrNoCookie {
 		if err == errAuthCookieInvalid {
 			deleteSessionCookie(w)
 			return users.User{}, errAuthCookieInvalid
 		}
-		user, err := us.UserByID(userID)
+		user, err := us.UserByID(sess.UserID)
 		if err != nil {
 			deleteSessionCookie(w)
 			return users.User{}, err
 		}
-		if !user.ValidateSession(sessID) {
+		if !user.ValidateSession(sess.ID, sess.Secret) {
 			deleteSessionCookie(w)
 			return users.User{}, errAuthCookieInvalid
 		}
-		writeSessionCookie(w, user.ID, sessID)
+		refreshSessionCookie(w, r)
 		return user, nil
 	}
 
@@ -83,50 +82,52 @@ func (s *Server) authorize(r *http.Request, user users.User) (bool, error) {
 	return true, nil
 }
 
-func parseSessionCookie(r *http.Request) (userID uuid.UUID, sessID uuid.UUID, err error) {
-	userID = uuid.Nil
-	sessID = uuid.Nil
+func parseSessionCookie(r *http.Request) (users.Session, error) {
+	sess := users.Session{}
 	c, err := r.Cookie("auth")
 	if err != nil {
-		return
+		return sess, err
 	}
-	parts := strings.Split(c.Value, "|")
-	if len(parts) != 2 {
-		err = errAuthCookieInvalid
-		return
-	}
-	bytes, err := base64.RawURLEncoding.DecodeString(parts[0])
+	b, err := base64.RawURLEncoding.DecodeString(c.Value)
 	if err != nil {
 		err = errAuthCookieInvalid
-		return
+		return sess, err
 	}
-	userID, err = uuid.FromBytes(bytes)
+	sess.UserID, err = uuid.FromBytes(b[:16])
 	if err != nil {
 		err = errAuthCookieInvalid
-		return
+		return users.Session{}, err
 	}
-	bytes, err = base64.RawURLEncoding.DecodeString(parts[1])
+	sess.ID, err = uuid.FromBytes(b[16:32])
 	if err != nil {
 		err = errAuthCookieInvalid
-		return
+		return users.Session{}, err
 	}
-	sessID, err = uuid.FromBytes(bytes)
-	if err != nil {
-		err = errAuthCookieInvalid
-		return
-	}
-	return
+	sess.Secret = string(b[32:])
+	return sess, nil
 }
 
-func writeSessionCookie(w http.ResponseWriter, userID uuid.UUID, sessID uuid.UUID) {
+func writeSessionCookie(w http.ResponseWriter, sess users.Session) {
+	b := make([]byte, 32+len(sess.Secret))
+	copy(b, sess.UserID.Bytes())
+	copy(b[16:], sess.ID.Bytes())
+	copy(b[32:], []byte(sess.Secret))
 	c := &http.Cookie{
-		Name: "auth",
-		Value: fmt.Sprintf("%s|%s",
-			base64.RawURLEncoding.EncodeToString(userID.Bytes()),
-			base64.RawURLEncoding.EncodeToString(sessID.Bytes())),
+		Name:   "auth",
+		Value:  base64.RawURLEncoding.EncodeToString(b),
 		MaxAge: 60 * 60 * 24 * 90,
+		Path:   "/",
 	}
 	http.SetCookie(w, c)
+}
+
+func refreshSessionCookie(w http.ResponseWriter, r *http.Request) {
+	c, err := r.Cookie("auth")
+	if c != nil && err == nil {
+		c.MaxAge = 60 * 60 * 24 * 90
+		c.Path = "/"
+		http.SetCookie(w, c)
+	}
 }
 
 func deleteSessionCookie(w http.ResponseWriter) {
@@ -135,5 +136,6 @@ func deleteSessionCookie(w http.ResponseWriter) {
 		Value:   "",
 		Expires: time.Now(),
 		MaxAge:  -1,
+		Path:    "/",
 	})
 }

@@ -7,13 +7,13 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/lunny/html2md"
 	"github.com/russross/blackfriday"
 	uuid "github.com/satori/go.uuid"
 
 	"github.com/aprice/freenote/notes"
 	"github.com/aprice/freenote/page"
 	"github.com/aprice/freenote/users"
-	"github.com/lunny/html2md"
 )
 
 // session
@@ -48,11 +48,14 @@ func (s *Server) doSession(rc requestContext, w http.ResponseWriter, r *http.Req
 			}
 		}
 		rc.user.CleanSessions()
-		sessID := user.NewSession()
+		sess, err := user.NewSession()
+		if handleError(w, err) {
+			return
+		}
 		if err = rc.db.UserStore().SaveUser(&user); handleError(w, err) {
 			return
 		}
-		writeSessionCookie(w, user.ID, sessID)
+		writeSessionCookie(w, sess)
 		sendResponse(w, r, decorateUser(user, true, true, s.conf), http.StatusOK)
 	case http.MethodDelete:
 		var payload struct {
@@ -60,10 +63,12 @@ func (s *Server) doSession(rc requestContext, w http.ResponseWriter, r *http.Req
 			SessionID uuid.UUID
 		}
 		if r.ContentLength == 0 {
-			payload.UserID, payload.SessionID, err = parseSessionCookie(r)
+			sess, err := parseSessionCookie(r)
 			if badRequest(w, err) {
 				return
 			}
+			payload.SessionID = sess.ID
+			payload.UserID = sess.UserID
 		} else if err := parseRequest(r, payload); badRequest(w, err) {
 			return
 		}

@@ -43,7 +43,7 @@ func RandomPassword() (string, *Password, error) {
 		return "", nil, err
 	}
 
-	passString := base64.StdEncoding.EncodeToString(passRaw)
+	passString := base64.RawStdEncoding.EncodeToString(passRaw)
 	pw, err := NewPassword(passString)
 	return passString, pw, err
 }

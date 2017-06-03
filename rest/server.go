@@ -58,11 +58,16 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		defer clo.Close()
 	}
 	user, err := s.authenticate(w, r, db.UserStore())
-	if err == users.ErrAuthenticationFailed {
+	switch err {
+	case errNoAuth, nil:
+	case errAuthCookieInvalid:
+		statusResponse(w, http.StatusUnauthorized)
+		return
+	case users.ErrAuthenticationFailed:
 		http.Error(w, "Authentication Failed", http.StatusUnauthorized)
 		return
-	}
-	if err != errNoAuth && handleError(w, err) {
+	default:
+		handleError(w, err)
 		return
 	}
 	if user.ID != uuid.Nil && rand.Float64() < 0.1 {

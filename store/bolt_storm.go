@@ -49,18 +49,28 @@ func (s *StormNoteStore) NoteByID(id uuid.UUID) (notes.Note, error) {
 	return result, stormError(err)
 }
 
-func (s *StormNoteStore) NotesByOwner(userID uuid.UUID, page page.Page) ([]notes.Note, error) {
+func (s *StormNoteStore) NotesByOwner(userID uuid.UUID, page page.Page) ([]notes.Note, int, error) {
 	var result []notes.Note
+	qry := s.db.Select(q.Eq("Owner", userID))
 	//TODO: User-controlled sorting
-	err := s.db.Find("Owner", userID, &result, storm.Limit(page.Length), storm.Skip(page.Start))
-	return result, stormError(err)
+	total, err := qry.Count(new(notes.Note))
+	if err != nil {
+		return nil, -1, err
+	}
+	err = qry.Limit(page.Length).Skip(page.Start).Find(&result)
+	return result, total, stormError(err)
 }
 
-func (s *StormNoteStore) NotesByFolder(userID uuid.UUID, folder string, page page.Page) ([]notes.Note, error) {
+func (s *StormNoteStore) NotesByFolder(userID uuid.UUID, folder string, page page.Page) ([]notes.Note, int, error) {
 	var result []notes.Note
+	qry := s.db.Select(q.And(q.Eq("Owner", userID), q.Eq("Folder", folder)))
 	//TODO: User-controlled sorting
-	err := s.db.Find("Folder", folder, &result)
-	return result, stormError(err)
+	total, err := qry.Count(new(notes.Note))
+	if err != nil {
+		return nil, -1, err
+	}
+	err = qry.Limit(page.Length).Skip(page.Start).Find(&result)
+	return result, total, stormError(err)
 }
 
 func (s *StormNoteStore) SaveNote(note *notes.Note) error {
@@ -95,11 +105,15 @@ func (s *StormUserStore) UserByName(username string) (users.User, error) {
 	return result, stormError(err)
 }
 
-func (s *StormUserStore) Users(page page.Page) ([]users.User, error) {
+func (s *StormUserStore) Users(page page.Page) ([]users.User, int, error) {
 	var result []users.User
 	//TODO: User-controlled sorting
-	err := s.db.All(&result, storm.Limit(page.Length), storm.Skip(page.Start))
-	return result, stormError(err)
+	total, err := s.db.Count(new(users.User))
+	if err != nil {
+		return nil, -1, err
+	}
+	err = s.db.All(&result, storm.Limit(page.Length), storm.Skip(page.Start))
+	return result, total, stormError(err)
 }
 
 func (s *StormUserStore) SaveUser(user *users.User) error {

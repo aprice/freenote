@@ -31,11 +31,11 @@ func (p Page) QueryString() string {
 func FromQueryString(u *url.URL, sortFields []string) Page {
 	p := Page{}
 	i, err := strconv.Atoi(u.Query().Get("start"))
-	if err != nil {
+	if err == nil {
 		p.Start = i
 	}
 	i, err = strconv.Atoi(u.Query().Get("length"))
-	if err != nil {
+	if err == nil {
 		p.Length = i
 	}
 	if p.Length <= 0 {

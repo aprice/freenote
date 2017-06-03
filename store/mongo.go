@@ -75,24 +75,34 @@ func (s *MongoNoteStore) NoteByID(id uuid.UUID) (notes.Note, error) {
 	return result, mongoError(err)
 }
 
-func (s *MongoNoteStore) NotesByOwner(userID uuid.UUID, page page.Page) ([]notes.Note, error) {
+func (s *MongoNoteStore) NotesByOwner(userID uuid.UUID, page page.Page) ([]notes.Note, int, error) {
 	result := []notes.Note{}
+	q := s.c.Find(bson.M{"owner": userID})
+	total, err := q.Count()
+	if err != nil {
+		return nil, -1, err
+	}
 	//TODO: Allow controlled sort field & direction
-	err := s.c.Find(bson.M{"owner": userID}).Sort("-modified").Skip(page.Start).Limit(page.Length).All(&result)
+	err = q.Sort("-modified").Skip(page.Start).Limit(page.Length).All(&result)
 	if err == nil && len(result) == 0 {
 		err = ErrNotFound
 	}
-	return result, mongoError(err)
+	return result, total, mongoError(err)
 }
 
-func (s *MongoNoteStore) NotesByFolder(userID uuid.UUID, folder string, page page.Page) ([]notes.Note, error) {
+func (s *MongoNoteStore) NotesByFolder(userID uuid.UUID, folder string, page page.Page) ([]notes.Note, int, error) {
 	result := []notes.Note{}
+	q := s.c.Find(bson.M{"owner": userID, "folder": folder})
+	total, err := q.Count()
+	if err != nil {
+		return nil, -1, err
+	}
 	//TODO: Allow controlled sort field & direction
-	err := s.c.Find(bson.M{"owner": userID, "folder": folder}).Sort("-modified").Skip(page.Start).Limit(page.Length).All(&result)
+	err = q.Sort("-modified").Skip(page.Start).Limit(page.Length).All(&result)
 	if err == nil && len(result) == 0 {
 		err = ErrNotFound
 	}
-	return result, mongoError(err)
+	return result, total, mongoError(err)
 }
 
 func (s *MongoNoteStore) FoldersByFolder(userID uuid.UUID, folder string) ([]string, error) {
@@ -154,14 +164,19 @@ func (s *MongoUserStore) UserByName(username string) (users.User, error) {
 	return result, mongoError(err)
 }
 
-func (s *MongoUserStore) Users(page page.Page) ([]users.User, error) {
+func (s *MongoUserStore) Users(page page.Page) ([]users.User, int, error) {
 	result := []users.User{}
+	q := s.c.Find(nil)
+	total, err := q.Count()
+	if err != nil {
+		return nil, -1, err
+	}
 	//TODO: Allow controlled sort field & direction
-	err := s.c.Find(nil).Sort("username").Skip(page.Start).Limit(page.Length).All(&result)
+	err = q.Sort("username").Skip(page.Start).Limit(page.Length).All(&result)
 	if err == nil && len(result) == 0 {
 		err = ErrNotFound
 	}
-	return result, mongoError(err)
+	return result, total, mongoError(err)
 }
 
 func (s *MongoUserStore) SaveUser(user *users.User) error {

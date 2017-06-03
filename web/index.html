@@ -39,6 +39,10 @@
 				<h2>Notes <i id="NewNoteButton" class="fa fa-fw fa-plus toolButton" onclick="NewNote()" title="New note"></i></h2>
 				<!-- Search/Filter controls -->
 				<ol id="NoteList"></ol>
+				<p id="NoteListPager">
+					<i class="fa fa-fw fa-arrow-left toolButton" id="PrevPageButton" onclick="PrevPage()"></i>
+					<i class="fa fa-fw fa-arrow-right toolButton" id="NextPageButton" onclick="NextPage()"></i>
+				</p>
 			</section>
 			<section id="NotePane">
 				<h1><a id="BackButton" onclick="SelectNote(null)" style="display:none"><i class="fa fa-fw fa-reply"></i></a><span id="NoteTitle" contenteditable="true"></span></h1>

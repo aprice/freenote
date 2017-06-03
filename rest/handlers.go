@@ -7,8 +7,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/lunny/html2md"
-	"github.com/russross/blackfriday"
 	uuid "github.com/satori/go.uuid"
 
 	"github.com/aprice/freenote/notes"
@@ -109,10 +107,11 @@ func (s *Server) doUsers(rc requestContext, w http.ResponseWriter, r *http.Reque
 		w.WriteHeader(http.StatusNoContent)
 	case http.MethodGet:
 		pageReq := page.FromQueryString(r.URL, []string{"username", "displayname"})
-		pageRes, err := rc.db.UserStore().Users(pageReq)
+		pageRes, total, err := rc.db.UserStore().Users(pageReq)
 		if handleError(w, err) {
 			return
 		}
+		pageReq.HasMore = total > (pageReq.Start + pageReq.Length)
 		sendResponse(w, r, decorateUsers(pageRes, pageReq, rc.user.Access >= users.LevelAdmin, s.conf), http.StatusOK)
 	case http.MethodPost:
 		//TODO: User creation controls
@@ -124,7 +123,7 @@ func (s *Server) doUsers(rc requestContext, w http.ResponseWriter, r *http.Reque
 		}
 		newUser.ID = uuid.NewV4()
 		var pw string
-		pw, newUser.Password, err = users.RandomPassword()
+		pw, newUser.Password, err = users.RandomPassword(12)
 		if handleError(w, err) {
 			return
 		}
@@ -277,15 +276,17 @@ func (s *Server) doNotes(rc requestContext, w http.ResponseWriter, r *http.Reque
 		//TODO: Option to filter by tag
 		//TODO: Full text search
 		var list []notes.Note
-		pageReq := page.FromQueryString(r.URL, []string{"title", "created", "modified"})
+		var total int
+		pageReq := page.FromQueryString(r.URL, []string{"modified", "title", "created"})
 		if folderPath == "" {
-			list, err = rc.db.NoteStore().NotesByOwner(rc.ownerID, pageReq)
+			list, total, err = rc.db.NoteStore().NotesByOwner(rc.ownerID, pageReq)
 		} else {
-			list, err = rc.db.NoteStore().NotesByFolder(rc.ownerID, folderPath, pageReq)
+			list, total, err = rc.db.NoteStore().NotesByFolder(rc.ownerID, folderPath, pageReq)
 		}
 		if handleError(w, err) {
 			return
 		}
+		pageReq.HasMore = total > (pageReq.Start + pageReq.Length)
 		sendResponse(w, r, decorateNotes(rc.owner, list, folderPath, pageReq, true, s.conf), http.StatusOK)
 	case http.MethodPost:
 		note := new(notes.Note)
@@ -305,9 +306,11 @@ func (s *Server) doNotes(rc requestContext, w http.ResponseWriter, r *http.Reque
 				return
 			}
 		}
+		ensureMarkdownBody(note, s.sanitizer)
 		if err = rc.db.NoteStore().SaveNote(note); handleError(w, err) {
 			return
 		}
+		ensureHTMLBody(note, s.sanitizer)
 		w.Header().Add("Location", fmt.Sprintf("%s/users/%s/notes/%s", s.conf.BaseURI, rc.ownerID, note.ID))
 		sendResponse(w, r, decorateNote(*note, true, s.conf), http.StatusCreated)
 	default:
@@ -328,7 +331,7 @@ func (s *Server) doNote(rc requestContext, w http.ResponseWriter, r *http.Reques
 			statusResponse(w, http.StatusForbidden)
 			return
 		}
-		rc.note.HTMLBody = string(blackfriday.MarkdownCommon([]byte(rc.note.Body)))
+		ensureHTMLBody(&rc.note, s.sanitizer)
 		//TODO: text/markdown, text/plain Accept support & front matter addition
 		sendResponse(w, r, decorateNote(rc.note, rc.note.Owner == rc.user.ID, s.conf), http.StatusOK)
 	case http.MethodPut:
@@ -345,15 +348,11 @@ func (s *Server) doNote(rc requestContext, w http.ResponseWriter, r *http.Reques
 			http.Error(w, "Bad Request: cant't change ID", http.StatusBadRequest)
 			return
 		}
-		if note.Body == "" && note.HTMLBody != "" {
-			note.Body = html2md.Convert(note.HTMLBody)
-		}
+		ensureMarkdownBody(note, s.sanitizer)
 		if err = rc.db.NoteStore().SaveNote(note); handleError(w, err) {
 			return
 		}
-		if note.HTMLBody == "" && note.Body != "" {
-			note.HTMLBody = string(blackfriday.MarkdownCommon([]byte(note.Body)))
-		}
+		ensureHTMLBody(note, s.sanitizer)
 		sendResponse(w, r, decorateNote(*note, rc.note.Owner == rc.user.ID, s.conf), http.StatusOK)
 		return
 	case http.MethodDelete:

@@ -1,8 +1,6 @@
 package users
 
 import (
-	"crypto/rand"
-	"encoding/base64"
 	"time"
 )
 
@@ -18,14 +16,7 @@ const RecoveryAdminName = "_admin"
 // RecoveryMode initializes recovery mode, creating a temporary admin account,
 // and returning the password to the account.
 func RecoveryMode() (string, error) {
-	passRaw := make([]byte, 12)
-	_, err := rand.Read(passRaw)
-	if err != nil {
-		return "", err
-	}
-
-	passString := base64.StdEncoding.EncodeToString(passRaw)
-	password, err := NewPassword(passString)
+	passString, password, err := RandomPassword(16)
 	if err != nil {
 		return "", err
 	}

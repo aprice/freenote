@@ -3,6 +3,10 @@ package rest
 import (
 	"fmt"
 
+	"github.com/lunny/html2md"
+	"github.com/microcosm-cc/bluemonday"
+	"github.com/russross/blackfriday"
+
 	"github.com/aprice/freenote/config"
 	"github.com/aprice/freenote/notes"
 	"github.com/aprice/freenote/page"
@@ -41,4 +45,17 @@ func decorateNotes(owner users.User, values []notes.Note, folder string, page pa
 	}
 	links.CollectionCR(base, page, canWrite)
 	return decoratedNotes{Notes: values, Links: links}
+}
+
+func ensureMarkdownBody(note *notes.Note, p *bluemonday.Policy) {
+	if note.Body == "" && note.HTMLBody != "" {
+		note.Body = html2md.Convert(p.Sanitize(note.HTMLBody))
+	}
+}
+
+func ensureHTMLBody(note *notes.Note, p *bluemonday.Policy) {
+	if note.HTMLBody == "" && note.Body != "" {
+		raw := blackfriday.MarkdownCommon([]byte(note.Body))
+		note.HTMLBody = string(p.SanitizeBytes(raw))
+	}
 }

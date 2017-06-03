@@ -29,6 +29,8 @@ var App = {
 	notes: null,
 	currentNote: null,
 	mode: "md",
+	prevPage: null,
+	nextPage: null,
 
 	init: function () {
 		this.userPanel = $id("User");
@@ -77,6 +79,15 @@ var App = {
 			el.addEventListener("click", function(evt){SelectNote(this.note)});
 		}
 		this.noteManager.style.display = "flex";
+		$("#NoteListPager .toolButton", this.noteManager).forEach(function(v){
+			v.classList.add("disabled");
+		});
+		if (this.prevPage) {
+			$id("PrevPageButton").classList.remove("disabled");
+		}
+		if (this.nextPage) {
+			$id("NextPageButton").classList.remove("disabled");
+		}
 	},
 
 	noteRefresh: function() {

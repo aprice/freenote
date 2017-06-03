@@ -1,11 +1,32 @@
-function LoadNotes() {
+function LoadNotes(pg) {
+	pg = pg || "/users/" + App.user.id + "/notes"
 	App.rest({
-		url: "/users/" + App.user.id + "/notes",
+		url: pg,
 		success: function(payload) {
 			App.notes = payload.notes;
+			App.prevPage = null;
+			if (payload._links.previous) {
+				App.prevPage = payload._links.previous.href;
+			}
+			App.nextPage = null;
+			if (payload._links.next) {
+				App.nextPage = payload._links.next.href;
+			}
 			App.noteListRefresh();
 		}
 	});
+}
+
+function NextPage() {
+	if (App.nextPage) {
+		LoadNotes(App.nextPage);
+	}
+}
+
+function PrevPage() {
+	if (App.prevPage) {
+		LoadNotes(App.prevPage);
+	}
 }
 
 function SelectNote(note) {

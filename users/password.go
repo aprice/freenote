@@ -20,8 +20,8 @@ type Password struct {
 	Salt    []byte
 }
 
-// NewPassword creates a new salt and hash for the given
-// password, using the current latest password version.
+// NewPassword creates a new salt and hash for the given password, using the
+// current latest password version.
 func NewPassword(password string) (*Password, error) {
 	scheme := schemes[currentPasswordVersion]
 	salt, err := scheme.Salt()
@@ -36,14 +36,17 @@ func NewPassword(password string) (*Password, error) {
 	return pwd, nil
 }
 
-func RandomPassword() (string, *Password, error) {
-	passRaw := make([]byte, 12)
+// RandomPassword generates a random password of the given length using a CPRNG.
+func RandomPassword(length int) (string, *Password, error) {
+	// DecodedLen returns the max byte length, we want to ensure we get at least
+	// length characters, so we add 1 to be safe.
+	passRaw := make([]byte, base64.RawStdEncoding.DecodedLen(length)+1)
 	_, err := rand.Read(passRaw)
 	if err != nil {
 		return "", nil, err
 	}
-
 	passString := base64.RawStdEncoding.EncodeToString(passRaw)
+	passString = passString[:length]
 	pw, err := NewPassword(passString)
 	return passString, pw, err
 }

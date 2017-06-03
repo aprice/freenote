@@ -27,12 +27,12 @@ type Session interface {
 // NoteStore implementations handle access to the backing store for notes.
 type NoteStore interface {
 	NoteByID(id uuid.UUID) (notes.Note, error)
-	NotesByOwner(userID uuid.UUID, page page.Page) ([]notes.Note, error)
-	NotesByFolder(userID uuid.UUID, folder string, page page.Page) ([]notes.Note, error)
+	NotesByOwner(userID uuid.UUID, page page.Page) ([]notes.Note, int, error)
+	NotesByFolder(userID uuid.UUID, folder string, page page.Page) ([]notes.Note, int, error)
 	//FoldersByFolder(userID uuid.UUID, folder string) ([]string, error)
-	//NotesByTag(userID uuid.UUID, tag string, page page.Page) ([]notes.Note, error)
-	//Tags(userID uuid.UUID, page page.Page) ([]string, error)
-	//Search(userID uuid.UUID, query string, page page.Page) ([]notes.Note, error)
+	//NotesByTag(userID uuid.UUID, tag string, page page.Page) ([]notes.Note, int, error)
+	//Tags(userID uuid.UUID) ([]string, error)
+	//Search(userID uuid.UUID, query string, page page.Page) ([]notes.Note, int, error)
 	SaveNote(note *notes.Note) error
 	DeleteNote(id uuid.UUID) error
 }
@@ -41,7 +41,7 @@ type NoteStore interface {
 type UserStore interface {
 	UserByID(id uuid.UUID) (users.User, error)
 	UserByName(username string) (users.User, error)
-	Users(page page.Page) ([]users.User, error)
+	Users(page page.Page) ([]users.User, int, error)
 	SaveUser(user *users.User) error
 	DeleteUser(id uuid.UUID) error
 }

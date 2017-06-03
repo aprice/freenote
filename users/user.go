@@ -39,7 +39,7 @@ func (u *User) ValidateSession(sessID uuid.UUID, key string) bool {
 }
 
 func (u *User) NewSession() (session Session, err error) {
-	key, pw, err := RandomPassword()
+	key, pw, err := RandomPassword(16)
 	if err != nil {
 		return Session{}, err
 	}

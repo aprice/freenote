@@ -1,11 +1,18 @@
 package rest
 
 import (
+	"context"
+	"crypto/tls"
+	"fmt"
 	"io"
 	"log"
 	"math/rand"
 	"net/http"
 	"strings"
+	"sync"
+	"time"
+
+	"golang.org/x/crypto/acme/autocert"
 
 	uuid "github.com/satori/go.uuid"
 
@@ -14,12 +21,16 @@ import (
 	"github.com/aprice/freenote/store"
 	"github.com/aprice/freenote/users"
 	"github.com/aprice/freenote/web"
+	"github.com/microcosm-cc/bluemonday"
 )
 
 type Server struct {
 	conf          config.Config
 	sessionCookie string
 	fs            http.Handler
+	sanitizer     *bluemonday.Policy
+	svr           *http.Server
+	tlsSvr        *http.Server
 }
 
 type requestContext struct {
@@ -39,12 +50,69 @@ func (rc requestContext) pathSegment(idx int) string {
 	return rc.path[idx]
 }
 
-func NewServer(conf config.Config) *Server {
-	return &Server{
+func NewServer(conf config.Config) (*Server, error) {
+	s := &Server{
 		conf:          conf,
 		sessionCookie: "sess",
 		fs:            web.GetEmbeddedContent(),
+		sanitizer:     bluemonday.UGCPolicy(),
 	}
+	s.svr = &http.Server{
+		Addr:    fmt.Sprintf(":%d", conf.Port),
+		Handler: s,
+	}
+	if len(conf.LetsEncryptHosts) > 0 {
+		m := autocert.Manager{
+			Prompt:     autocert.AcceptTOS,
+			HostPolicy: autocert.HostWhitelist(conf.LetsEncryptHosts...),
+		}
+		s.tlsSvr = &http.Server{
+			Addr:      fmt.Sprintf(":%d", conf.TLSPort),
+			TLSConfig: &tls.Config{GetCertificate: m.GetCertificate},
+		}
+	} else if conf.CertFile != "" {
+		cer, err := tls.LoadX509KeyPair("server.crt", "server.key")
+		if err != nil {
+			return nil, err
+		}
+		s.tlsSvr = &http.Server{
+			Addr: fmt.Sprintf(":%d", conf.TLSPort),
+			TLSConfig: &tls.Config{
+				Certificates: []tls.Certificate{cer},
+			},
+		}
+	}
+	return s, nil
+}
+
+func (s *Server) Start() {
+	go func() {
+		log.Println(s.svr.ListenAndServe())
+	}()
+	if s.tlsSvr != nil {
+		go func() {
+			log.Println(s.tlsSvr.ListenAndServe())
+		}()
+	}
+}
+
+func (s *Server) Stop() {
+	wg := new(sync.WaitGroup)
+	wg.Add(1)
+	go func() {
+		ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+		s.svr.Shutdown(ctx)
+		wg.Done()
+	}()
+	if s.tlsSvr != nil {
+		wg.Add(1)
+		go func() {
+			ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+			s.tlsSvr.Shutdown(ctx)
+			wg.Done()
+		}()
+	}
+	wg.Wait()
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -102,14 +170,12 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch pp[0] {
 	case "users":
 		s.doUsers(rc, w, r)
-		return
 	case "session":
 		s.doSession(rc, w, r)
-		return
+	case "debug":
+		doDebug(w, r)
 	default:
-		w.Header().Add("Pragma", "no-cache")
 		s.fs.ServeHTTP(w, r)
-		return
 	}
 }
 

@@ -1,22 +1,32 @@
 package main
 
 import (
-	"fmt"
 	"log"
-	"net/http"
 	"os"
+	"os/signal"
 	"time"
+
+	flag "github.com/spf13/pflag"
 
 	"github.com/aprice/freenote/config"
 	"github.com/aprice/freenote/rest"
+	"github.com/aprice/freenote/stats"
 	"github.com/aprice/freenote/users"
 )
 
 func main() {
-	conf, err := config.Configure()
+	stats.Run()
+
+	cfile := flag.StringP("config", "c", "/etc/freenoted/config.json", "Config file path")
+	recovery := flag.Bool("recovery", false, "Admin recovery mode")
+	flag.Parse()
+
+	conf, err := config.Configure(*cfile)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	conf.RecoveryMode = conf.RecoveryMode || *recovery
 
 	err = users.InitCommonPasswords(conf)
 	if err != nil {
@@ -31,7 +41,15 @@ func main() {
 		log.Printf("Recovery user: %q password: %q good until %s", users.RecoveryAdminName, pw, time.Now().Add(users.RecoveryPeriod))
 	}
 
-	restServer := rest.NewServer(conf)
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", conf.Port), restServer))
-	os.Exit(0)
+	restServer, err := rest.NewServer(conf)
+	if err != nil {
+		log.Fatal(err)
+	}
+	restServer.Start()
+
+	stop := make(chan os.Signal)
+	signal.Notify(stop, os.Interrupt)
+	<-stop
+
+	restServer.Stop()
 }

@@ -7,13 +7,21 @@ import (
 
 type Config struct {
 	Port               int
+	TLSPort            int
 	BaseURI            string
 	RecoveryMode       bool
 	CommonPasswordList string
 
-	Elastic ConnectionInfo
-	Mongo   ConnectionInfo
-	BoltDB  string
+	LetsEncryptHosts []string
+	CertFile         string
+	KeyFile          string
+
+	MailServer ConnectionInfo
+
+	Elastic  ConnectionInfo
+	Mongo    ConnectionInfo
+	Postgres ConnectionInfo
+	BoltDB   string
 }
 
 var NilConfig = Config{}
@@ -27,9 +35,12 @@ type ConnectionInfo struct {
 
 var NilConnection = ConnectionInfo{}
 
-func Configure() (Config, error) {
-	c := new(Config)
-	f, err := os.Open("config.json")
+func Configure(path string) (Config, error) {
+	c := &Config{
+		Port:    80,
+		TLSPort: 443,
+	}
+	f, err := os.Open(path)
 	if err != nil {
 		return NilConfig, err
 	}

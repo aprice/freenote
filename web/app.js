@@ -169,7 +169,8 @@ var App = {
 				if (options.success) options.success(payload);
 			} else {
 				App.error("Request failed: " + r.responseText);
-				if (options.failed) options.failed();
+				if (r.status == 404 && options.notFound) options.notFound();
+				else if (options.failed) options.failed();
 			}
 			if (options.finally) options.finally();
 		};

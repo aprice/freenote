@@ -2,7 +2,6 @@ package users
 
 import (
 	"errors"
-	"log"
 	"time"
 
 	uuid "github.com/satori/go.uuid"
@@ -65,8 +64,6 @@ func (u *User) CleanSessions() {
 			s = append(s, sess)
 		}
 	}
-	log.Printf("Cleaned %s's sessions, %d before cleaning, %d after",
-		u.Username, len(u.Sessions), len(s))
 	u.Sessions = s
 }
 

@@ -13,6 +13,13 @@ function LoadNotes(pg) {
 				App.nextPage = payload._links.next.href;
 			}
 			App.noteListRefresh();
+		},
+		notFound: function() {
+			App.notes = null;
+			App.nextPage = null;
+			App.prevPage = null;
+			App.currentNote = null;
+			App.noteListRefresh();
 		}
 	});
 }

@@ -62,21 +62,25 @@ func NewServer(conf config.Config) (*Server, error) {
 		Handler: s,
 	}
 	if len(conf.LetsEncryptHosts) > 0 {
+		log.Printf("Let's Encrypt! Hosts: %v", conf.LetsEncryptHosts)
 		m := autocert.Manager{
 			Prompt:     autocert.AcceptTOS,
 			HostPolicy: autocert.HostWhitelist(conf.LetsEncryptHosts...),
 		}
 		s.tlsSvr = &http.Server{
 			Addr:      fmt.Sprintf(":%d", conf.TLSPort),
+			Handler:   s,
 			TLSConfig: &tls.Config{GetCertificate: m.GetCertificate},
 		}
 	} else if conf.CertFile != "" {
-		cer, err := tls.LoadX509KeyPair("server.crt", "server.key")
+		log.Printf("Using provided SSL certificate: %s", conf.CertFile)
+		cer, err := tls.LoadX509KeyPair(conf.CertFile, conf.KeyFile)
 		if err != nil {
 			return nil, err
 		}
 		s.tlsSvr = &http.Server{
-			Addr: fmt.Sprintf(":%d", conf.TLSPort),
+			Addr:    fmt.Sprintf(":%d", conf.TLSPort),
+			Handler: s,
 			TLSConfig: &tls.Config{
 				Certificates: []tls.Certificate{cer},
 			},
@@ -87,11 +91,13 @@ func NewServer(conf config.Config) (*Server, error) {
 
 func (s *Server) Start() {
 	go func() {
+		log.Printf("http listening on %d", s.conf.Port)
 		log.Println(s.svr.ListenAndServe())
 	}()
 	if s.tlsSvr != nil {
 		go func() {
-			log.Println(s.tlsSvr.ListenAndServe())
+			log.Printf("https listening on %d", s.conf.TLSPort)
+			log.Println(s.tlsSvr.ListenAndServeTLS("", ""))
 		}()
 	}
 }

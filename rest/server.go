@@ -8,6 +8,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -57,6 +58,7 @@ func NewServer(conf config.Config) (*Server, error) {
 		fs:            web.GetEmbeddedContent(),
 		sanitizer:     bluemonday.UGCPolicy(),
 	}
+	s.sanitizer.AllowAttrs("class").Matching(regexp.MustCompile("^language-[a-zA-Z0-9]+$")).OnElements("code")
 	s.svr = &http.Server{
 		Addr:    fmt.Sprintf(":%d", conf.Port),
 		Handler: s,

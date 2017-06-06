@@ -1,6 +1,8 @@
 package store
 
 import (
+	"strings"
+
 	"github.com/asdine/storm"
 	"github.com/asdine/storm/q"
 	uuid "github.com/satori/go.uuid"
@@ -52,24 +54,24 @@ func (s *StormNoteStore) NoteByID(id uuid.UUID) (notes.Note, error) {
 func (s *StormNoteStore) NotesByOwner(userID uuid.UUID, page page.Page) ([]notes.Note, int, error) {
 	var result []notes.Note
 	qry := s.db.Select(q.Eq("Owner", userID))
-	//TODO: User-controlled sorting
 	total, err := qry.Count(new(notes.Note))
 	if err != nil {
 		return nil, -1, err
+	} else if total == 0 {
+		return make([]notes.Note, 0), 0, nil
 	}
-	err = qry.Limit(page.Length).Skip(page.Start).Find(&result)
+	err = applyPage(qry, page).Find(&result)
 	return result, total, stormError(err)
 }
 
 func (s *StormNoteStore) NotesByFolder(userID uuid.UUID, folder string, page page.Page) ([]notes.Note, int, error) {
 	var result []notes.Note
 	qry := s.db.Select(q.And(q.Eq("Owner", userID), q.Eq("Folder", folder)))
-	//TODO: User-controlled sorting
 	total, err := qry.Count(new(notes.Note))
 	if err != nil {
 		return nil, -1, err
 	}
-	err = qry.Limit(page.Length).Skip(page.Start).Find(&result)
+	err = applyPage(qry, page).Find(&result)
 	return result, total, stormError(err)
 }
 
@@ -107,12 +109,12 @@ func (s *StormUserStore) UserByName(username string) (users.User, error) {
 
 func (s *StormUserStore) Users(page page.Page) ([]users.User, int, error) {
 	var result []users.User
-	//TODO: User-controlled sorting
-	total, err := s.db.Count(new(users.User))
+	qry := s.db.Select()
+	total, err := qry.Count(new(users.User))
 	if err != nil {
 		return nil, -1, err
 	}
-	err = s.db.All(&result, storm.Limit(page.Length), storm.Skip(page.Start))
+	err = applyPage(qry, page).Find(&result)
 	return result, total, stormError(err)
 }
 
@@ -137,4 +139,11 @@ func stormError(err error) error {
 		return ErrNotFound
 	}
 	return err
+}
+
+func applyPage(qry storm.Query, page page.Page) storm.Query {
+	if page.SortDescending {
+		qry.Reverse()
+	}
+	return qry.OrderBy(strings.Title(page.SortBy)).Skip(page.Start).Limit(page.Length)
 }

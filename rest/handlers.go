@@ -106,7 +106,11 @@ func (s *Server) doUsers(rc requestContext, w http.ResponseWriter, r *http.Reque
 		w.Header().Add("Allow", "GET, POST")
 		w.WriteHeader(http.StatusNoContent)
 	case http.MethodGet:
-		pageReq := page.FromQueryString(r.URL, []string{"username", "displayname"})
+		pageReq := page.Page{
+			Length: 10,
+			SortBy: "username",
+		}
+		pageReq.FromQueryString(r.URL, []string{"username", "displayname"})
 		pageRes, total, err := rc.db.UserStore().Users(pageReq)
 		if handleError(w, err) {
 			return
@@ -127,8 +131,6 @@ func (s *Server) doUsers(rc requestContext, w http.ResponseWriter, r *http.Reque
 		if handleError(w, err) {
 			return
 		}
-		//TODO: Give this to the user stead of the log
-		log.Println(pw)
 		if err = users.ValidateUsername(newUser.Username); badRequest(w, err) {
 			return
 		}
@@ -136,8 +138,20 @@ func (s *Server) doUsers(rc requestContext, w http.ResponseWriter, r *http.Reque
 			log.Println("error saving user")
 			return
 		}
+		wn := notes.WelcomeNote(newUser.ID)
+		err = rc.db.NoteStore().SaveNote(&wn)
+		if err != nil {
+			log.Println("Saving welcome note failed: ", err)
+		}
+		pl := struct {
+			decoratedUser
+			Password string
+		}{
+			decorateUser(newUser, true, true, s.conf),
+			pw,
+		}
 		w.Header().Add("Location", fmt.Sprintf("%s/users/%s", s.conf.BaseURI, newUser.ID))
-		sendResponse(w, r, decorateUser(newUser, true, true, s.conf), http.StatusCreated)
+		sendResponse(w, r, pl, http.StatusCreated)
 		return
 	default:
 		w.Header().Add("Allow", "GET, POST")
@@ -275,9 +289,16 @@ func (s *Server) doNotes(rc requestContext, w http.ResponseWriter, r *http.Reque
 		//TODO: Option to list folders instead of notes
 		//TODO: Option to filter by tag
 		//TODO: Full text search
-		var list []notes.Note
-		var total int
-		pageReq := page.FromQueryString(r.URL, []string{"modified", "title", "created"})
+		var (
+			list  []notes.Note
+			total int
+		)
+		pageReq := page.Page{
+			Length:         10,
+			SortBy:         "modified",
+			SortDescending: true,
+		}
+		pageReq.FromQueryString(r.URL, []string{"modified", "title", "created"})
 		if folderPath == "" {
 			list, total, err = rc.db.NoteStore().NotesByOwner(rc.ownerID, pageReq)
 		} else {
@@ -287,7 +308,7 @@ func (s *Server) doNotes(rc requestContext, w http.ResponseWriter, r *http.Reque
 			return
 		}
 		pageReq.HasMore = total > (pageReq.Start + pageReq.Length)
-		sendResponse(w, r, decorateNotes(rc.owner, list, folderPath, pageReq, true, s.conf), http.StatusOK)
+		sendResponse(w, r, decorateNotes(rc.owner, list, folderPath, pageReq, rc.ownerID == rc.user.ID, s.conf), http.StatusOK)
 	case http.MethodPost:
 		note := new(notes.Note)
 		var err error

@@ -58,7 +58,7 @@ function SelectNote(note) {
 }
 
 function SaveNote(cb) {
-	if (App.currentNote == null) {
+	if (App.currentNote == null || !App.isModified()) {
 		if (cb) cb();
 		return;
 	}

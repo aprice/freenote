@@ -69,7 +69,7 @@ var App = {
 		for (var i = 0; i < this.notes.length; i++) {
 			this.notes[i].index = i;
 			var note = this.notes[i];
-			var el = $el('<li id="note-'+note.id+'">'+note.title+'</li>');
+			var el = $el('<li id="note-'+note.id+'"><span class="noteTitle">'+note.title+'</span><span class="noteModified">'+(new Date(note.modified)).toLocaleString()+'</span></li>');
 			if (note == this.currentNote) {
 				el.classList.add("selected");
 				this.currentNote.index = i;
@@ -105,13 +105,21 @@ var App = {
 			$1("#SourceButton i.html-mode", this.noteManager).classList.add("selected");
 			$1("#SourceButton i.md-mode", this.noteManager).classList.remove("selected");
 			this.noteBody.innerHTML = this.currentNote.html;
+			this.currentNote.html = this.noteBody.innerHTML;
 		} else {
 			$1("#SourceButton i.md-mode", this.noteManager).classList.add("selected");
 			$1("#SourceButton i.html-mode", this.noteManager).classList.remove("selected");
 			this.noteBody.innerText = this.currentNote.body;
 		}
 		this.noteBody.classList.remove("md-mode", "html-mode");
-		this.noteBody.classList.add(App.mode+"-mode");
+		this.noteBody.classList.add(this.mode+"-mode");
+	},
+
+	isModified: function() {
+		if (!this.currentNote) return false;
+		else return this.currentNote.title != this.noteTitle.innerText
+			|| (this.mode == "md" && this.currentNote.body != this.noteBody.innerText)
+			|| (this.mode == "html" && this.currentNote.html != this.noteBody.innerHTML);
 	},
 
 	log: function (data) {
@@ -196,5 +204,4 @@ var App = {
 
 window.addEventListener("load", function () {
 	App.init();
-	App.message("Initialized");
 });

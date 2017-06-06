@@ -121,6 +121,12 @@ a {
 	background-color: #fff;
 }
 
+#NoteList li .noteModified {
+	font-size: 80%;
+	color: #333;
+	display: block;
+}
+
 #NotePane {
 	flex: 2 1 50em;
 	padding-bottom: 1em;

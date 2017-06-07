@@ -1,11 +1,23 @@
 // general-purpose utilities
 var $id = document.getElementById.bind(document);
-function $(qry,el=null) {
+function $(qry,el) {
 	el = el || document;
 	return el.querySelectorAll(qry);
 }
-function $1(qry,el=null) {
+function $1(qry,el) {
 	return $(qry,el)[0];
+}
+function $el(html) {
+	var tpl = document.createElement('template');
+	tpl.innerHTML = html;
+	return tpl.content.firstChild;
+}
+function $each(qry,el,fn) {
+	if (typeof(el) == "function") {
+		fn = el;
+		el = null;
+	}
+	$(qry,el).forEach(fn);
 }
 function fade(el,ms,step) {
 	if (!step) el.style.opacity = 1;
@@ -15,11 +27,6 @@ function fade(el,ms,step) {
 	} else {
 		setTimeout(function(){fade(el,ms,true)}, ms * .05);
 	}
-}
-function $el(html) {
-	var tpl = document.createElement('template');
-	tpl.innerHTML = html;
-	return tpl.content.firstChild;
 }
 
 // core app state & helpers
@@ -31,6 +38,9 @@ var App = {
 	mode: "md",
 	prevPage: null,
 	nextPage: null,
+	curPage: null,
+	refreshInterval: null,
+	refreshFrequency: 5 * 60 * 1000,
 
 	init: function () {
 		this.userPanel = $id("User");
@@ -176,7 +186,8 @@ var App = {
 				}
 				if (options.success) options.success(payload);
 			} else {
-				App.error("Request failed: " + r.responseText);
+				if (!options.hideError)
+					App.error("Request failed: " + r.responseText);
 				if (r.status == 404 && options.notFound) options.notFound();
 				else if (options.failed) options.failed();
 			}

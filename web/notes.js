@@ -1,5 +1,9 @@
-function LoadNotes(pg) {
-	pg = pg || "/users/" + App.user.id + "/notes"
+function LoadNotes(pg,hideError) {
+	if (typeof(pg) == "boolean") {
+		hideError = pg;
+		pg = null;
+	}
+	pg = pg || App.curPage || ("/users/" + App.user.id + "/notes")
 	App.rest({
 		url: pg,
 		success: function(payload) {
@@ -12,12 +16,15 @@ function LoadNotes(pg) {
 			if (payload._links.next) {
 				App.nextPage = payload._links.next.href;
 			}
+			App.curPage = payload._links.canonical.href;
 			App.noteListRefresh();
 		},
+		hideError: hideError,
 		notFound: function() {
 			App.notes = null;
 			App.nextPage = null;
 			App.prevPage = null;
+			App.curPage = null;
 			App.currentNote = null;
 			App.noteListRefresh();
 		}
@@ -134,3 +141,34 @@ function SwitchSourceView() {
 		App.noteRefresh();
 	});
 }
+
+window.addEventListener("load", function () {
+	// Make links in HTML editing mode ctrl-clickable
+	window.addEventListener("keydown", function (evt) {
+		if (App.mode == "html" && evt.ctrlKey) {
+			$each("#NoteBody a", function (v) {
+				v.contentEditable = false;
+			});
+		}
+	});
+	window.addEventListener("keyup", function (evt) {
+		if (App.mode == "html" && !evt.ctrlKey) {
+			$each("#NoteBody a", function (v) {
+				v.contentEditable = 'inherit';
+			});
+		}
+	});
+
+	// Refresh note list on regain visibility
+	document.addEventListener("visibilitychange", function () {
+		if (document.hidden) {
+			window.clearInterval(App.refreshInterval);
+		} else {
+			LoadNotes();
+			App.refreshInterval = window.setInterval(LoadNotes, App.refreshFrequency);
+		}
+	});
+
+	// Refresh every 5 minutes
+	App.refreshInterval = window.setInterval(LoadNotes, App.refreshFrequency);
+});

@@ -68,6 +68,7 @@ func NewServer(conf config.Config) (*Server, error) {
 		m := autocert.Manager{
 			Prompt:     autocert.AcceptTOS,
 			HostPolicy: autocert.HostWhitelist(conf.LetsEncryptHosts...),
+			Cache:      autocert.DirCache("/tmp/freenoted/acme"),
 		}
 		s.tlsSvr = &http.Server{
 			Addr:      fmt.Sprintf(":%d", conf.TLSPort),
@@ -108,14 +109,16 @@ func (s *Server) Stop() {
 	wg := new(sync.WaitGroup)
 	wg.Add(1)
 	go func() {
-		ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cxl := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cxl()
 		s.svr.Shutdown(ctx)
 		wg.Done()
 	}()
 	if s.tlsSvr != nil {
 		wg.Add(1)
 		go func() {
-			ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+			ctx, cxl := context.WithTimeout(context.Background(), 5*time.Second)
+			cxl()
 			s.tlsSvr.Shutdown(ctx)
 			wg.Done()
 		}()

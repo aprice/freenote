@@ -148,6 +148,7 @@ a {
 	overflow: auto;
 	min-height: 5em;
 	flex: 1 1 5em;
+	padding: .2em;
 }
 
 #NoteBody.md-mode {

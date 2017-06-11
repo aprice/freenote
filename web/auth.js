@@ -1,37 +1,32 @@
 function Login() {
 	var user = $id("UsernameField").value;
 	var pass = $id("PasswordField").value;
-	var r = new XMLHttpRequest();
-	r.open("POST", "/session", true);
-	r.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-	r.onreadystatechange = function () {
-		if (r.readyState != 4) return;
-		if (r.status < 400) {
-			App.log("Success: " + r.responseText);
-			App.user = JSON.parse(r.responseText);
+	App.rest({
+		method: "POST",
+		url: "/session",
+		body: "username=" + encodeURIComponent(user) + "&password=" + encodeURIComponent(pass),
+		ctype: "application/x-www-form-urlencoded",
+		success: function (payload) {
+			App.user = payload;
 			App.userRefresh();
 			LoadNotes();
-		} else {
-			App.error("Authentication failed: " + r.responseText);
 		}
-	};
-	r.send("username=" + encodeURIComponent(user) + "&password=" + encodeURIComponent(pass));
+	});
 }
 
 function Logout() {
-	var r = new XMLHttpRequest();
-	r.open("DELETE", "/session", true);
-	r.onreadystatechange = function () {
-		if (r.readyState != 4) return;
-		if (r.status < 400) {
-			App.log("Success: " + r.responseText);
+	App.rest({
+		method: "DELETE",
+		url: "/session",
+		success: function (payload) {
 			App.user = null;
+			App.noteList = null;
+			App.currentNote = null;
 			App.userRefresh();
-		} else {
-			App.error("Logout failed: " + r.responseText);
+			App.noteListRefresh();
+			App.noteRefresh();
 		}
-	};
-	r.send();
+	});
 }
 
 function EditUser() {
@@ -50,39 +45,33 @@ function SaveUser() {
 		$id("ConfirmPasswordField").setCustomValidity("Confirm password must match password.");
 		return
 	}
-	var r = new XMLHttpRequest();
-	r.open("PUT", "/users/" + App.user.id + "/password", true);
-	r.setRequestHeader("Content-Type", "text/plain");
-	r.onreadystatechange = function () {
-		if (r.readyState != 4) return;
-		if (r.status < 400) {
-			App.log("Success: " + r.responseText);
+	App.rest({
+		method: "PUT",
+		url: "/users/" + App.user.id + "/password",
+		ctype: "text/plain",
+		body: pw,
+		success: function (payload) {
 			App.message("Password updated.");
-		} else {
-			App.error("Updating password failed: " + r.responseText);
 		}
-	};
-	r.send(pw);
+	});
 	DismissUserModal();
 }
 
 window.addEventListener("load", function() {
-	var r = new XMLHttpRequest();
-	r.open("GET", "/session", true);
-	r.onreadystatechange = function () {
-		if (r.readyState != 4) return;
-		if (r.status < 400) {
-			App.log("Success: " + r.responseText);
-			App.user = JSON.parse(r.responseText);
+	App.rest({
+		url: "/session",
+		success: function (payload) {
+			App.user = payload;
 			App.userRefresh();
 			LoadNotes();
-		} else if (r.status == 401) {
-			App.log("Not logged in");
-			App.user = null;
-			App.userRefresh();
-		} else {
-			App.error("Authentication failed: " + r.responseText);
-		}
-	};
-	r.send();
+		},
+		error: function (status) {
+			if (status == 401) {
+				App.log("Not logged in");
+				App.user = null;
+				App.userRefresh();
+			} else {
+				App.error("Authentication failed: " + r.responseText);
+			}		}
+	});
 });

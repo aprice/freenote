@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -9,29 +10,35 @@ import (
 
 	uuid "github.com/satori/go.uuid"
 
+	"github.com/aprice/freenote/ids"
 	"github.com/aprice/freenote/notes"
 	"github.com/aprice/freenote/page"
+	"github.com/aprice/freenote/stats"
+	"github.com/aprice/freenote/store"
 	"github.com/aprice/freenote/users"
 )
 
 // session
-func (s *Server) doSession(rc requestContext, w http.ResponseWriter, r *http.Request) {
+func (s *Server) doSession(w http.ResponseWriter, r *http.Request) {
+	defer stats.Measure("req", "session", r.Method)()
 	var err error
+	db, _ := store.FromContext(r.Context())
 	switch r.Method {
 	case http.MethodOptions:
 		w.Header().Add("Allow", "GET, POST, DELETE")
 		w.WriteHeader(http.StatusNoContent)
 	case http.MethodGet:
-		if rc.user.ID == uuid.Nil {
+		user, loggedIn := users.FromContext(r.Context())
+		if !loggedIn || user.ID == uuid.Nil {
 			statusResponse(w, http.StatusUnauthorized)
 			return
 		}
-		sendResponse(w, r, decorateUser(rc.user, true, true, s.conf), http.StatusOK)
+		sendResponse(w, r, decorateUser(user, true, true, s.conf), http.StatusOK)
 		return
 	case http.MethodPost:
 		var user users.User
 		if username := r.FormValue("username"); username != "" {
-			user, err = rc.db.UserStore().UserByName(username)
+			user, err = db.UserStore().UserByName(username)
 			if handleError(w, err) {
 				return
 			}
@@ -40,22 +47,27 @@ func (s *Server) doSession(rc requestContext, w http.ResponseWriter, r *http.Req
 				return
 			}
 		} else {
-			user, err = s.authenticate(w, r, rc.db.UserStore())
+			user, err = s.authenticate(w, r, db.UserStore())
 			if handleError(w, err) {
 				return
 			}
 		}
-		rc.user.CleanSessions()
+		user.CleanSessions()
 		sess, err := user.NewSession()
 		if handleError(w, err) {
 			return
 		}
-		if err = rc.db.UserStore().SaveUser(&user); handleError(w, err) {
+		if err = db.UserStore().SaveUser(&user); handleError(w, err) {
 			return
 		}
 		writeSessionCookie(w, sess)
 		sendResponse(w, r, decorateUser(user, true, true, s.conf), http.StatusOK)
 	case http.MethodDelete:
+		user, loggedIn := users.FromContext(r.Context())
+		if !loggedIn {
+			handleError(w, errNoAuth)
+			return
+		}
 		var payload struct {
 			UserID    uuid.UUID
 			SessionID uuid.UUID
@@ -70,22 +82,22 @@ func (s *Server) doSession(rc requestContext, w http.ResponseWriter, r *http.Req
 		} else if err := parseRequest(r, payload); badRequest(w, err) {
 			return
 		}
-		if payload.UserID != rc.user.ID {
+		if payload.UserID != user.ID {
 			statusResponse(w, http.StatusForbidden)
 			return
 		}
 		deleteSessionCookie(w)
-		rc.user.CleanSessions()
+		user.CleanSessions()
 		idx := -1
-		for i, v := range rc.user.Sessions {
+		for i, v := range user.Sessions {
 			if v.ID == payload.SessionID {
 				idx = i
 				break
 			}
 		}
 		if idx >= 0 {
-			rc.user.Sessions = append(rc.user.Sessions[:idx], rc.user.Sessions[idx:]...)
-			if err := rc.db.UserStore().SaveUser(&rc.user); handleError(w, err) {
+			user.Sessions = append(user.Sessions[:idx], user.Sessions[idx:]...)
+			if err := db.UserStore().SaveUser(&user); handleError(w, err) {
 				return
 			}
 		}
@@ -96,27 +108,34 @@ func (s *Server) doSession(rc requestContext, w http.ResponseWriter, r *http.Req
 }
 
 // users/?.*
-func (s *Server) doUsers(rc requestContext, w http.ResponseWriter, r *http.Request) {
-	if len(rc.path) > 1 {
-		s.doUser(rc, w, r)
+func (s *Server) doUsers(w http.ResponseWriter, r *http.Request) {
+	if len(r.URL.Path) > 1 {
+		s.doUser(w, r)
 		return
 	}
+	defer stats.Measure("req", "users", r.Method)()
+	db, _ := store.FromContext(r.Context())
+	user, _ := users.FromContext(r.Context())
 	switch r.Method {
 	case http.MethodOptions:
 		w.Header().Add("Allow", "GET, POST")
 		w.WriteHeader(http.StatusNoContent)
 	case http.MethodGet:
+		if user.Access < users.LevelAdmin {
+			handleError(w, errUnauthorized)
+			return
+		}
 		pageReq := page.Page{
 			Length: 10,
 			SortBy: "username",
 		}
 		pageReq.FromQueryString(r.URL, []string{"username", "displayname"})
-		pageRes, total, err := rc.db.UserStore().Users(pageReq)
+		pageRes, total, err := db.UserStore().Users(pageReq)
 		if handleError(w, err) {
 			return
 		}
 		pageReq.HasMore = total > (pageReq.Start + pageReq.Length)
-		sendResponse(w, r, decorateUsers(pageRes, pageReq, rc.user.Access >= users.LevelAdmin, s.conf), http.StatusOK)
+		sendResponse(w, r, decorateUsers(pageRes, pageReq, user.Access >= users.LevelAdmin, s.conf), http.StatusOK)
 	case http.MethodPost:
 		//TODO: User creation controls
 		//TODO: New user verification
@@ -134,12 +153,16 @@ func (s *Server) doUsers(rc requestContext, w http.ResponseWriter, r *http.Reque
 		if err = users.ValidateUsername(newUser.Username); badRequest(w, err) {
 			return
 		}
-		if err = rc.db.UserStore().SaveUser(&newUser); handleError(w, err) {
+		if _, err := db.UserStore().UserByName(newUser.Username); err == nil {
+			badRequest(w, errors.New("username already in use"))
+			return
+		}
+		if err = db.UserStore().SaveUser(&newUser); handleError(w, err) {
 			log.Println("error saving user")
 			return
 		}
 		wn := notes.WelcomeNote(newUser.ID)
-		err = rc.db.NoteStore().SaveNote(&wn)
+		err = db.NoteStore().SaveNote(&wn)
 		if err != nil {
 			log.Println("Saving welcome note failed: ", err)
 		}
@@ -160,62 +183,73 @@ func (s *Server) doUsers(rc requestContext, w http.ResponseWriter, r *http.Reque
 }
 
 // users/(id|username)/?.*
-func (s *Server) doUser(rc requestContext, w http.ResponseWriter, r *http.Request) {
-	var err error
-	if rc.ownerID, err = uuid.FromString(rc.pathSegment(1)); err == nil {
-		rc.owner, err = rc.db.UserStore().UserByID(rc.ownerID)
+func (s *Server) doUser(w http.ResponseWriter, r *http.Request) {
+	idOrName := popSegment(r)
+	db, _ := store.FromContext(r.Context())
+	user, _ := users.FromContext(r.Context())
+	var (
+		err     error
+		owner   users.User
+		ownerID uuid.UUID
+	)
+	if ownerID, err = ids.ParseID(idOrName); err == nil {
+		owner, err = db.UserStore().UserByID(ownerID)
 	} else {
-		rc.owner, err = rc.db.UserStore().UserByName(rc.pathSegment(1))
+		owner, err = db.UserStore().UserByName(idOrName)
 	}
 	if handleError(w, err) {
 		return
 	}
-	rc.ownerID = rc.owner.ID
-
-	if rc.pathSegment(2) == "password" {
-		s.doPassword(rc, w, r)
+	r = r.WithContext(users.NewOwnerContext(r.Context(), owner))
+	nextHandler := popSegment(r)
+	if nextHandler == "password" {
+		s.doPassword(w, r)
 		return
-	} else if rc.pathSegment(2) == "notes" {
-		s.doNotes(rc, w, r)
+	} else if nextHandler == "notes" {
+		s.doNotes(w, r)
 		return
-	} else if len(rc.path) > 2 {
+	} else if len(nextHandler) > 1 {
 		statusResponse(w, http.StatusNotFound)
 		return
 	}
+
+	defer stats.Measure("req", "user", r.Method)()
 
 	switch r.Method {
 	case http.MethodOptions:
 		w.Header().Add("Allow", "GET, PUT, DELETE")
 		w.WriteHeader(http.StatusNoContent)
 	case http.MethodGet:
-		self := rc.ownerID == rc.user.ID
-		sendResponse(w, r, decorateUser(rc.owner, self, self, s.conf), http.StatusOK)
+		self := owner.ID == user.ID
+		sendResponse(w, r, decorateUser(owner, self, self, s.conf), http.StatusOK)
 	case http.MethodPut:
 		//TODO: Conflict checking (etag, modified, etc)
-		user := new(users.User)
+		updateUser := new(users.User)
 		var err error
-		if err = parseRequest(r, user); badRequest(w, err) {
+		if err = parseRequest(r, updateUser); badRequest(w, err) {
 			return
 		}
 		// No fuckery allowed
-		if user.ID != rc.ownerID {
+		if updateUser.ID != owner.ID {
 			http.Error(w, "Bad Request: cant't change user ID", http.StatusBadRequest)
 			return
 		}
-		if user.Username != rc.owner.Username {
+		if updateUser.Username != owner.Username {
 			http.Error(w, "Bad Request: can't change username", http.StatusBadRequest)
 			return
 		}
 		// Password change is via a different route
-		user.Password = rc.owner.Password
-		if err = rc.db.UserStore().SaveUser(user); handleError(w, err) {
+		updateUser.Password = owner.Password
+		updateUser.Sessions = owner.Sessions
+		if err = db.UserStore().SaveUser(updateUser); handleError(w, err) {
 			return
 		}
-		w.Header().Add("Location", fmt.Sprintf("%s/users/%s", s.conf.BaseURI, user.ID))
-		sendResponse(w, r, decorateUser(*user, true, true, s.conf), http.StatusOK)
+		w.Header().Add("Location", fmt.Sprintf("%s/users/%s", s.conf.BaseURI, updateUser.ID))
+		sendResponse(w, r, decorateUser(*updateUser, true, true, s.conf), http.StatusOK)
 		return
 	case http.MethodDelete:
-	//TODO: Delete user & all notes
+		//TODO: Delete user & all notes
+		statusResponse(w, http.StatusNotImplemented)
 	default:
 		w.Header().Add("Allow", "GET, PUT, DELETE")
 		statusResponse(w, http.StatusMethodNotAllowed)
@@ -223,14 +257,17 @@ func (s *Server) doUser(rc requestContext, w http.ResponseWriter, r *http.Reques
 }
 
 // users/{id}/password
-func (s *Server) doPassword(rc requestContext, w http.ResponseWriter, r *http.Request) {
+func (s *Server) doPassword(w http.ResponseWriter, r *http.Request) {
+	db, _ := store.FromContext(r.Context())
+	user, _ := users.FromContext(r.Context())
+	owner, _ := users.OwnerFromContext(r.Context())
 	switch r.Method {
 	case http.MethodOptions:
 		w.Header().Add("Allow", http.MethodPut)
 		w.WriteHeader(http.StatusNoContent)
 	case http.MethodPut:
 		var err error
-		if rc.ownerID != rc.user.ID && rc.user.Access < users.LevelAdmin {
+		if owner.ID != user.ID && user.Access < users.LevelAdmin {
 			statusResponse(w, http.StatusForbidden)
 			return
 		}
@@ -241,19 +278,21 @@ func (s *Server) doPassword(rc requestContext, w http.ResponseWriter, r *http.Re
 				return
 			}
 			pwr.Password = string(body)
-		} else {
-			if err = parseRequest(r, &pwr); badRequest(w, err) {
-				return
-			}
+		} else if err = parseRequest(r, &pwr); badRequest(w, err) {
+			return
 		}
 		if err = users.ValidatePassword(pwr.Password); badRequest(w, err) {
 			return
 		}
-		rc.owner.Password, err = users.NewPassword(pwr.Password)
+		if owner.Password, err = users.NewPassword(pwr.Password); handleError(w, err) {
+			return
+		}
+		sess, err := owner.NewSession()
 		if handleError(w, err) {
 			return
 		}
-		if err = rc.db.UserStore().SaveUser(&rc.owner); handleError(w, err) {
+		writeSessionCookie(w, sess)
+		if err = db.UserStore().SaveUser(&owner); handleError(w, err) {
 			return
 		}
 		w.WriteHeader(http.StatusOK)
@@ -264,25 +303,23 @@ func (s *Server) doPassword(rc requestContext, w http.ResponseWriter, r *http.Re
 }
 
 // users/{id}/notes/?.*
-func (s *Server) doNotes(rc requestContext, w http.ResponseWriter, r *http.Request) {
-	var folderPath string
-	var err error
-	if rc.noteID, err = uuid.FromString(rc.pathSegment(3)); err == nil {
-		rc.note, err = rc.db.NoteStore().NoteByID(rc.noteID)
-		if handleError(w, err) {
-			return
-		}
-		s.doNote(rc, w, r)
+func (s *Server) doNotes(w http.ResponseWriter, r *http.Request) {
+	if len(r.URL.Path) > 1 {
+		s.doNote(w, r)
 		return
-	} else if len(rc.path) > 3 {
-		folderPath = strings.Join(rc.path[3:], "/")
 	}
+	var err error
+	db, _ := store.FromContext(r.Context())
+	user, _ := users.FromContext(r.Context())
+	owner, _ := users.OwnerFromContext(r.Context())
+	folderPath := r.URL.Query().Get("folder")
+	defer stats.Measure("req", "notes", r.Method)()
 	switch r.Method {
 	case http.MethodOptions:
 		w.Header().Add("Allow", "GET, POST")
 		w.WriteHeader(http.StatusNoContent)
 	case http.MethodGet:
-		if rc.ownerID != rc.user.ID && rc.user.Access < users.LevelAdmin {
+		if owner.ID != user.ID && user.Access < users.LevelAdmin {
 			statusResponse(w, http.StatusForbidden)
 			return
 		}
@@ -300,15 +337,15 @@ func (s *Server) doNotes(rc requestContext, w http.ResponseWriter, r *http.Reque
 		}
 		pageReq.FromQueryString(r.URL, []string{"modified", "title", "created"})
 		if folderPath == "" {
-			list, total, err = rc.db.NoteStore().NotesByOwner(rc.ownerID, pageReq)
+			list, total, err = db.NoteStore().NotesByOwner(owner.ID, pageReq)
 		} else {
-			list, total, err = rc.db.NoteStore().NotesByFolder(rc.ownerID, folderPath, pageReq)
+			list, total, err = db.NoteStore().NotesByFolder(owner.ID, folderPath, pageReq)
 		}
 		if handleError(w, err) {
 			return
 		}
 		pageReq.HasMore = total > (pageReq.Start + pageReq.Length)
-		sendResponse(w, r, decorateNotes(rc.owner, list, folderPath, pageReq, rc.ownerID == rc.user.ID, s.conf), http.StatusOK)
+		sendResponse(w, r, decorateNotes(owner, list, folderPath, pageReq, owner.ID == user.ID, s.conf), http.StatusOK)
 	case http.MethodPost:
 		note := new(notes.Note)
 		var err error
@@ -316,7 +353,7 @@ func (s *Server) doNotes(rc requestContext, w http.ResponseWriter, r *http.Reque
 			return
 		}
 		note.ID = uuid.NewV4()
-		note.Owner = rc.ownerID
+		note.Owner = owner.ID
 		if folderPath != "" {
 			note.Folder = folderPath
 		}
@@ -328,11 +365,11 @@ func (s *Server) doNotes(rc requestContext, w http.ResponseWriter, r *http.Reque
 			}
 		}
 		ensureMarkdownBody(note, s.sanitizer)
-		if err = rc.db.NoteStore().SaveNote(note); handleError(w, err) {
+		if err = db.NoteStore().SaveNote(note); handleError(w, err) {
 			return
 		}
 		ensureHTMLBody(note, s.sanitizer)
-		w.Header().Add("Location", fmt.Sprintf("%s/users/%s/notes/%s", s.conf.BaseURI, rc.ownerID, note.ID))
+		w.Header().Add("Location", fmt.Sprintf("%s/users/%s/notes/%s", s.conf.BaseURI, owner.ID, note.ID))
 		sendResponse(w, r, decorateNote(*note, true, s.conf), http.StatusCreated)
 	default:
 		w.Header().Add("Allow", "GET, POST")
@@ -341,43 +378,67 @@ func (s *Server) doNotes(rc requestContext, w http.ResponseWriter, r *http.Reque
 }
 
 // users/{id}/notes/{id}
-func (s *Server) doNote(rc requestContext, w http.ResponseWriter, r *http.Request) {
+func (s *Server) doNote(w http.ResponseWriter, r *http.Request) {
+	db, _ := store.FromContext(r.Context())
+	user, _ := users.FromContext(r.Context())
+	owner, _ := users.OwnerFromContext(r.Context())
+	var (
+		noteID uuid.UUID
+		err    error
+		note   notes.Note
+	)
+	if noteID, err = ids.ParseID(popSegment(r)); badRequest(w, err) {
+		return
+	}
+	if note, err = db.NoteStore().NoteByID(noteID); handleError(w, err) {
+		return
+	}
+	// If there were anything chained after this, we'd add note to the context.
+	defer stats.Measure("req", "note", r.Method)()
 	switch r.Method {
 	case http.MethodOptions:
 		w.Header().Add("Allow", "GET, PUT, DELETE")
 		w.WriteHeader(http.StatusNoContent)
 	case http.MethodGet:
 		//TODO: Sharing
-		if rc.ownerID != rc.user.ID && rc.user.Access < users.LevelAdmin {
+		if owner.ID != user.ID && user.Access < users.LevelAdmin {
 			statusResponse(w, http.StatusForbidden)
 			return
 		}
-		ensureHTMLBody(&rc.note, s.sanitizer)
+		ensureHTMLBody(&note, s.sanitizer)
 		//TODO: text/markdown, text/plain Accept support & front matter addition
-		sendResponse(w, r, decorateNote(rc.note, rc.note.Owner == rc.user.ID, s.conf), http.StatusOK)
+		sendResponse(w, r, decorateNote(note, note.Owner == user.ID, s.conf), http.StatusOK)
 	case http.MethodPut:
 		//TODO: Conflict checking (etag, modified, etc)
 		//TODO: Sharing
 		//TODO: text/markdown, text/plain, text/html Content-Type support & front matter parsing
+		if owner.ID != user.ID && user.Access < users.LevelAdmin {
+			statusResponse(w, http.StatusForbidden)
+			return
+		}
 		note := new(notes.Note)
 		var err error
 		if err = parseRequest(r, note); badRequest(w, err) {
 			return
 		}
-		if note.ID != rc.note.ID {
+		if note.ID != note.ID {
 			// No fuckery allowed
 			http.Error(w, "Bad Request: cant't change ID", http.StatusBadRequest)
 			return
 		}
 		ensureMarkdownBody(note, s.sanitizer)
-		if err = rc.db.NoteStore().SaveNote(note); handleError(w, err) {
+		if err = db.NoteStore().SaveNote(note); handleError(w, err) {
 			return
 		}
 		ensureHTMLBody(note, s.sanitizer)
-		sendResponse(w, r, decorateNote(*note, rc.note.Owner == rc.user.ID, s.conf), http.StatusOK)
+		sendResponse(w, r, decorateNote(*note, note.Owner == user.ID, s.conf), http.StatusOK)
 		return
 	case http.MethodDelete:
-		if err := rc.db.NoteStore().DeleteNote(rc.noteID); handleError(w, err) {
+		if owner.ID != user.ID && user.Access < users.LevelAdmin {
+			statusResponse(w, http.StatusForbidden)
+			return
+		}
+		if err := db.NoteStore().DeleteNote(noteID); handleError(w, err) {
 			return
 		}
 		statusResponse(w, http.StatusNoContent)

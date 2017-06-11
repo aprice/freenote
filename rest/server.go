@@ -18,7 +18,6 @@ import (
 	uuid "github.com/satori/go.uuid"
 
 	"github.com/aprice/freenote/config"
-	"github.com/aprice/freenote/notes"
 	"github.com/aprice/freenote/store"
 	"github.com/aprice/freenote/users"
 	"github.com/aprice/freenote/web"
@@ -26,37 +25,36 @@ import (
 )
 
 type Server struct {
-	conf          config.Config
-	sessionCookie string
-	fs            http.Handler
-	sanitizer     *bluemonday.Policy
-	svr           *http.Server
-	tlsSvr        *http.Server
+	conf      config.Config
+	fs        http.Handler
+	sanitizer *bluemonday.Policy
+	svr       *http.Server
+	tlsSvr    *http.Server
 }
 
-type requestContext struct {
-	db      store.Session
-	user    users.User
-	ownerID uuid.UUID
-	owner   users.User
-	noteID  uuid.UUID
-	note    notes.Note
-	path    []string
-}
-
-func (rc requestContext) pathSegment(idx int) string {
-	if idx < 0 || idx > len(rc.path)-1 {
-		return ""
+func firstSegment(path string) string {
+	path = strings.Trim(path, "/")
+	if idx := strings.Index(path, "/"); idx > 0 {
+		return path[:idx]
 	}
-	return rc.path[idx]
+	return path
+}
+
+func stripSegment(r *http.Request) {
+	r.URL.Path = strings.TrimPrefix(r.URL.Path, "/"+firstSegment(r.URL.Path))
+}
+
+func popSegment(r *http.Request) string {
+	seg := firstSegment(r.URL.Path)
+	r.URL.Path = strings.TrimPrefix(r.URL.Path, "/"+seg)
+	return seg
 }
 
 func NewServer(conf config.Config) (*Server, error) {
 	s := &Server{
-		conf:          conf,
-		sessionCookie: "sess",
-		fs:            web.GetEmbeddedContent(),
-		sanitizer:     bluemonday.UGCPolicy(),
+		conf:      conf,
+		fs:        web.GetEmbeddedContent(),
+		sanitizer: bluemonday.UGCPolicy(),
 	}
 	s.sanitizer.AllowAttrs("class").Matching(regexp.MustCompile("^language-[a-zA-Z0-9]+$")).OnElements("code")
 	s.svr = &http.Server{
@@ -118,7 +116,7 @@ func (s *Server) Stop() {
 		wg.Add(1)
 		go func() {
 			ctx, cxl := context.WithTimeout(context.Background(), 5*time.Second)
-			cxl()
+			defer cxl()
 			s.tlsSvr.Shutdown(ctx)
 			wg.Done()
 		}()
@@ -128,27 +126,24 @@ func (s *Server) Stop() {
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	db, err := store.NewSession(s.conf)
-	if err != nil {
-		statusResponse(w, http.StatusInternalServerError)
-		log.Println(err)
+	if handleError(w, err) {
 		return
 	}
 	if clo, ok := db.(io.Closer); ok {
 		defer clo.Close()
 	}
+	r = r.WithContext(store.NewContext(r.Context(), db))
 	user, err := s.authenticate(w, r, db.UserStore())
 	switch err {
 	case errNoAuth, nil:
 	case errAuthCookieInvalid:
 		statusResponse(w, http.StatusUnauthorized)
 		return
-	case users.ErrAuthenticationFailed:
-		http.Error(w, "Authentication Failed", http.StatusUnauthorized)
-		return
 	default:
 		handleError(w, err)
 		return
 	}
+	r = r.WithContext(users.NewContext(r.Context(), user))
 	if user.ID != uuid.Nil && rand.Float64() < 0.1 {
 		user.CleanSessions()
 		db.UserStore().SaveUser(&user)
@@ -165,29 +160,23 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	var pp []string
-	path := strings.Trim(r.URL.Path, "/")
-	path = strings.ToLower(path)
-	if path == "" {
-		pp = make([]string, 1)
-	} else {
-		pp = strings.Split(path, "/")
-	}
-	rc := requestContext{
-		db:   db,
-		user: user,
-		path: pp,
-	}
-	switch pp[0] {
+	first := firstSegment(r.URL.Path)
+	switch first {
 	case "users":
-		s.doUsers(rc, w, r)
+		stripSegment(r)
+		s.doUsers(w, r)
 	case "session":
-		s.doSession(rc, w, r)
+		stripSegment(r)
+		s.doSession(w, r)
 	case "debug":
 		doDebug(w, r)
 	default:
 		s.fs.ServeHTTP(w, r)
 	}
+}
+
+func statusResponse(w http.ResponseWriter, statusCode int) {
+	http.Error(w, http.StatusText(statusCode), statusCode)
 }
 
 // Handle an error; returns true if a response was sent, false otherwise
@@ -200,16 +189,15 @@ func handleError(w http.ResponseWriter, err error) bool {
 		http.Error(w, "Authentication Failed", http.StatusUnauthorized)
 		return true
 	}
+	if err == errUnauthorized {
+		statusResponse(w, http.StatusForbidden)
+	}
 	if err != nil {
 		log.Printf("%T: %[1]q", err)
 		statusResponse(w, http.StatusInternalServerError)
 		return true
 	}
 	return false
-}
-
-func statusResponse(w http.ResponseWriter, statusCode int) {
-	http.Error(w, http.StatusText(statusCode), statusCode)
 }
 
 func badRequest(w http.ResponseWriter, err error) bool {

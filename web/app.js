@@ -39,8 +39,11 @@ var App = {
 	prevPage: null,
 	nextPage: null,
 	curPage: null,
+	createLink: null,
 	refreshInterval: null,
 	refreshFrequency: 5 * 60 * 1000,
+	saveInterval: null,
+	saveFrequency: 1 * 60 * 1000,
 
 	init: function () {
 		this.userPanel = $id("User");
@@ -173,6 +176,10 @@ var App = {
 
 	rest: function(options) {
 		var r = new XMLHttpRequest();
+		if (options.link) {
+			options.method = options.link.method;
+			options.url = options.link.href;
+		}
 		options.method = options.method || "GET";
 		r.open(options.method, options.url, true);
 		r.setRequestHeader("Accept", "application/json");
@@ -186,10 +193,8 @@ var App = {
 				}
 				if (options.success) options.success(payload);
 			} else {
-				if (!options.hideError)
-					App.error("Request failed: " + r.responseText);
-				if (r.status == 404 && options.notFound) options.notFound();
-				else if (options.failed) options.failed();
+				if (options.failed) options.failed(r.status);
+				else if (!options.hideError) App.error("Request failed: " + r.responseText);
 			}
 			if (options.finally) options.finally();
 		};

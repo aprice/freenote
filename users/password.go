@@ -38,6 +38,9 @@ func NewPassword(password string) (*Password, error) {
 
 // RandomPassword generates a random password of the given length using a CPRNG.
 func RandomPassword(length int) (string, *Password, error) {
+	if length <= 0 {
+		return "", nil, fmt.Errorf("invalid password length %d", length)
+	}
 	// DecodedLen returns the max byte length, we want to ensure we get at least
 	// length characters, so we add 1 to be safe.
 	passRaw := make([]byte, base64.RawStdEncoding.DecodedLen(length)+1)

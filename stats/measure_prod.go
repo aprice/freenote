@@ -11,7 +11,7 @@ func RecordError(name string) {
 }
 
 // Measure an operation. Easiest used as `defer Measure("name")()`.
-func Measure(name string) func() {
+func Measure(names ...string) func() {
 	return func() {}
 }
 

@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"errors"
 
 	uuid "github.com/satori/go.uuid"
@@ -53,4 +54,17 @@ func NewSession(conf config.Config) (Session, error) {
 		return NewMongoStore(conf)
 	}
 	return nil, errors.New("No backing store confiured")
+}
+
+type contextKey int
+
+var sessionKey contextKey = 0
+
+func NewContext(ctx context.Context, sess Session) context.Context {
+	return context.WithValue(ctx, sessionKey, sess)
+}
+
+func FromContext(ctx context.Context) (Session, bool) {
+	sess, ok := ctx.Value(sessionKey).(Session)
+	return sess, ok
 }

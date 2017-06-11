@@ -1,9 +1,10 @@
 function LoadNotes(pg,hideError) {
+	if (!App.user) return;
 	if (typeof(pg) == "boolean") {
 		hideError = pg;
 		pg = null;
 	}
-	pg = pg || App.curPage || ("/users/" + App.user.id + "/notes")
+	pg = pg || App.curPage || App.user._links.notes.href;
 	App.rest({
 		url: pg,
 		success: function(payload) {
@@ -17,16 +18,18 @@ function LoadNotes(pg,hideError) {
 				App.nextPage = payload._links.next.href;
 			}
 			App.curPage = payload._links.canonical.href;
+			App.createLink = payload._links.create;
 			App.noteListRefresh();
 		},
-		hideError: hideError,
-		notFound: function() {
-			App.notes = null;
-			App.nextPage = null;
-			App.prevPage = null;
-			App.curPage = null;
-			App.currentNote = null;
-			App.noteListRefresh();
+		failed: function(status) {
+			if (status == 404) {
+				App.notes = null;
+				App.nextPage = null;
+				App.prevPage = null;
+				App.curPage = null;
+				App.currentNote = null;
+				App.noteListRefresh();
+			}
 		}
 	});
 }
@@ -52,6 +55,7 @@ function SelectNote(note) {
 			return;
 		}
 		App.rest({
+			//TODO: Use canonical link href from hypderdata (not currently being sent)
 			url: "/users/" + App.user.id + "/notes/" + note.id,
 			success: function(payload) {
 				App.currentNote = payload;
@@ -79,10 +83,7 @@ function SaveNote(cb) {
 	if (App.mode == "md") note.body = App.noteBody.innerText;
 	else note.html = App.noteBody.innerHTML;
 	App.rest({
-		method: note.id ? "PUT" : "POST",
-		url: note.id
-			? "/users/" + App.user.id + "/notes/" + note.id
-			: "/users/" + App.user.id + "/notes",
+		link: note.id ? note._links.save : App.createLink,
 		payload: note,
 		success: function(payload) {
 			App.currentNote = payload;
@@ -110,21 +111,18 @@ function NewNote() {
 		};
 		App.notes.push(App.currentNote);
 		App.noteRefresh();
-		App.noteListRefresh();
+		LoadNotes();
 	});
 }
 
 function DeleteNote() {
-	// TODO: confirmation modal
 	App.confirm("Are you sure you want to delete this note?", false, function() {
 		App.rest({
-			method: "DELETE",
-			url: "/users/" + App.user.id + "/notes/" + App.currentNote.id,
+			link: App.currentNote._links.delete,
 			success: function (payload) {
 				App.notes.splice(App.currentNote.index, 1);
-				App.currentNote = null;
-				App.noteRefresh();
-				App.noteListRefresh();
+				SelectNote(null);
+				LoadNotes();
 			}
 		});
 	});
@@ -159,16 +157,22 @@ window.addEventListener("load", function () {
 		}
 	});
 
-	// Refresh note list on regain visibility
+	// Save on lose visibility, refresh note list on regain visibility
 	document.addEventListener("visibilitychange", function () {
 		if (document.hidden) {
 			window.clearInterval(App.refreshInterval);
+			window.clearInterval(App.saveInterval);
+			SaveNote();
 		} else {
 			LoadNotes();
 			App.refreshInterval = window.setInterval(LoadNotes, App.refreshFrequency);
+			App.saveInterval = window.setInterval(SaveNote, App.saveFrequency);
 		}
 	});
 
-	// Refresh every 5 minutes
+	// Refresh note list on regular interval
 	App.refreshInterval = window.setInterval(LoadNotes, App.refreshFrequency);
+
+	// Save note on regular interval
+	App.saveInterval = window.setInterval(SaveNote, App.saveFrequency);
 });

@@ -3,17 +3,28 @@
 package stats
 
 import (
+	"encoding/json"
 	"expvar"
+	"strings"
+	"sync"
 	"time"
 )
 
-var opMap = make(map[string]opStats)
+var opMap = make(map[string]*opStats)
+var mu = sync.Mutex{}
 
 type opStats struct {
-	count     *expvar.Int
-	avgTime   *expvar.Int
-	totalTime time.Duration
-	errors    *expvar.Int
+	Count     int32
+	AvgTime   time.Duration
+	TotalTime time.Duration
+	Errors    int32
+}
+
+func (s opStats) String() string {
+	mu.Lock()
+	defer mu.Unlock()
+	json, _ := json.Marshal(&s)
+	return string(json)
 }
 
 // Record an operation execution
@@ -30,7 +41,8 @@ func RecordError(name string) {
 }
 
 // Measure an operation. Easiest used as `defer Measure("name")()`.
-func Measure(name string) func() {
+func Measure(names ...string) func() {
+	name := strings.ToLower(strings.Join(names, "_"))
 	start := time.Now()
 	return func() {
 		opChan <- Operation{
@@ -50,33 +62,30 @@ func Run() func() {
 	stop := make(chan sentinel)
 	go func() {
 		var (
-			entry opStats
+			entry *opStats
 			ok    bool
-			pfx   string
 		)
 		for {
 			select {
 			case <-stop:
 				return
 			case op := <-opChan:
+				mu.Lock()
 				if entry, ok = opMap[op.Name]; !ok {
-					pfx = "op." + op.Name + "."
-					entry = opStats{
-						expvar.NewInt(pfx + "count"),
-						expvar.NewInt(pfx + "average"),
-						0,
-						expvar.NewInt(pfx + "errors"),
-					}
+					name := "op_" + op.Name
+					entry = new(opStats)
 					opMap[op.Name] = entry
+					expvar.Publish(name, entry)
 				}
-				entry.count.Add(1)
 				if op.Elapsed > 0 {
-					entry.totalTime = entry.totalTime + op.Elapsed
+					entry.Count++
+					entry.TotalTime += op.Elapsed
+					entry.AvgTime = time.Duration(entry.TotalTime.Nanoseconds() / int64(entry.Count))
 				}
 				if op.Error {
-					entry.errors.Add(1)
+					entry.Errors++
 				}
-				entry.avgTime.Set(int64(entry.totalTime/time.Millisecond) / entry.count.Value())
+				mu.Unlock()
 			}
 		}
 	}()

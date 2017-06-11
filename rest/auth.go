@@ -16,6 +16,7 @@ import (
 var errNoAuth = errors.New("no authentication provided")
 var errAuthFailed = errors.New("authentication failed")
 var errAuthCookieInvalid = errors.New("auth cookie invalid")
+var errUnauthorized = errors.New("unauthorized request")
 
 // Supported authentication: HTTP Basic, HTTP Bearer, Cookie
 func (s *Server) authenticate(w http.ResponseWriter, r *http.Request, us store.UserStore) (users.User, error) {

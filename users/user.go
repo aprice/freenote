@@ -22,6 +22,15 @@ type User struct {
 	Sessions    []*Session  `json:"sessions,omitempty" xml:"-"`
 }
 
+func New(username string) User {
+	return User{
+		ID:       uuid.NewV4(),
+		Username: username,
+		Access:   LevelUser,
+		Sessions: make([]*Session, 0),
+	}
+}
+
 func (u *User) ValidateSession(sessID uuid.UUID, key string) bool {
 	if u.Sessions == nil || len(u.Sessions) == 0 {
 		return false

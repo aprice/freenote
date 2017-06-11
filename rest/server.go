@@ -47,6 +47,9 @@ func stripSegment(r *http.Request) {
 func popSegment(r *http.Request) string {
 	seg := firstSegment(r.URL.Path)
 	r.URL.Path = strings.TrimPrefix(r.URL.Path, "/"+seg)
+	if r.URL.Path == "" {
+		r.URL.Path = "/"
+	}
 	return seg
 }
 

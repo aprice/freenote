@@ -20,7 +20,7 @@ function Logout() {
 		url: "/session",
 		success: function (payload) {
 			App.user = null;
-			App.noteList = null;
+			App.notes = null;
 			App.currentNote = null;
 			App.userRefresh();
 			App.noteListRefresh();
@@ -72,6 +72,7 @@ window.addEventListener("load", function() {
 				App.userRefresh();
 			} else {
 				App.error("Authentication failed: " + r.responseText);
-			}		}
+			}
+		}
 	});
 });

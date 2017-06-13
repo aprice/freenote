@@ -143,14 +143,14 @@ function SwitchSourceView() {
 window.addEventListener("load", function () {
 	// Make links in HTML editing mode ctrl-clickable
 	window.addEventListener("keydown", function (evt) {
-		if (App.mode == "html" && evt.ctrlKey) {
+		if (App.currentNote && App.mode == "html" && evt.ctrlKey) {
 			$each("#NoteBody a", function (v) {
 				v.contentEditable = false;
 			});
 		}
 	});
 	window.addEventListener("keyup", function (evt) {
-		if (App.mode == "html" && !evt.ctrlKey) {
+		if (App.currentNote && App.mode == "html" && !evt.ctrlKey) {
 			$each("#NoteBody a", function (v) {
 				v.contentEditable = 'inherit';
 			});

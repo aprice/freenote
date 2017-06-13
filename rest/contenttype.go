@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/aprice/freenote/stringset"
 )
 
 var supportedResponseTypes = []string{
@@ -78,6 +80,8 @@ func negotiateType(types []string, r *http.Request) string {
 	if len(types) == 0 {
 		return ""
 	}
+	typeSet := stringset.New()
+	typeSet.Add(types...)
 	ah := r.Header.Get("Accept")
 	if ah == "" || ah == "*/*" {
 		return types[0]
@@ -108,12 +112,9 @@ func negotiateType(types []string, r *http.Request) string {
 			weight = q
 			ctype = types[0]
 		}
-		for i, s := range types {
-			if t == s {
-				weight = q - (float64(i) / 10000.0)
-				ctype = s
-				break
-			}
+		if typeSet.Contains(t) {
+			weight = q
+			ctype = t
 		}
 	}
 	return ctype

@@ -9,15 +9,13 @@ import (
 	"unicode/utf8"
 
 	"github.com/aprice/freenote/config"
+	"github.com/aprice/freenote/stringset"
 )
 
 const minPasswordLength = 8
 const maxPasswordLength = 128
 
-type sentinel struct{}
-
-var nothing = sentinel{}
-var commonPasswords map[string]sentinel
+var commonPasswords = stringset.New()
 
 var ErrPasswordTooShort = fmt.Errorf("password does not meet minimum length %d", minPasswordLength)
 var ErrPasswordTooLong = fmt.Errorf("password exceeds maximum length %d", maxPasswordLength)
@@ -39,18 +37,16 @@ func ReadCommonPasswords(r io.Reader) error {
 	if commonPasswords != nil {
 		return nil
 	}
-	cp := make(map[string]sentinel)
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
 		pw := scanner.Text()
 		if ValidatePassword(pw) == nil {
-			cp[pw] = nothing
+			commonPasswords.Add(pw)
 		}
 	}
 	if err := scanner.Err(); err != nil {
 		return err
 	}
-	commonPasswords = cp
 	return nil
 }
 
@@ -63,17 +59,17 @@ func ValidatePassword(password string) error {
 	if byteLen > maxPasswordLength {
 		return ErrPasswordTooLong
 	}
-	chars := make(map[rune]sentinel, charLen)
+	chars := stringset.New()
 	for _, ch := range password {
-		chars[ch] = nothing
+		chars.Add(string(ch))
 	}
-	if len(chars) <= (charLen / 2) {
+	if chars.Count() <= (charLen / 2) {
 		return ErrPasswordTooRepetitive
 	}
 	if commonPasswords == nil {
 		return nil
 	}
-	if _, ok := commonPasswords[password]; ok {
+	if commonPasswords.Contains(password) {
 		return ErrPasswordTooCommon
 	}
 	return nil

@@ -116,5 +116,4 @@ func AppendQueryString(base, query string) string {
 		return base + "&" + query
 	}
 	return base + "?" + query
-
 }

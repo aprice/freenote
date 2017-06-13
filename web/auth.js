@@ -65,7 +65,7 @@ window.addEventListener("load", function() {
 			App.userRefresh();
 			LoadNotes();
 		},
-		error: function (status) {
+		failed: function (status) {
 			if (status == 401) {
 				App.log("Not logged in");
 				App.user = null;

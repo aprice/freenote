@@ -1,17 +1,18 @@
 # Architecture
 
 ## Package Overview
- - cmd: command main packages
-   - freenote: freenote CLI tool
-   - freenoted: freenote server
- - config: configuration
- - notes: note model and handling
- - page: pagination model and handling
- - rest: REST API handler and helpers
- - stats: stats measurement for expvar
- - store: backing store handlers
- - users: user account model and handling
- - web: UI content files (HTML/CSS/JS)
+ - `cmd`: command main packages
+   - `freenote`: freenote CLI tool
+   - `freenoted`: freenote server
+ - `config`: configuration
+ - `ids`: ID helper functions
+ - `notes`: note model and handling
+ - `page`: pagination model and handling
+ - `rest`: REST API handler and helpers
+ - `stats`: stats measurement for expvar
+ - `store`: backing store handlers
+ - `users`: user account model and handling
+ - `web`: UI content files (HTML/CSS/JS)
 
 ## REST API Handler
 Becuase the REST API is pretty straightforward, we don't use any third-party
@@ -78,5 +79,6 @@ system recovery, when no administrative users are able to log in.
 
 ## Web UI and Embedded Content
 The web UI is a static HTML/CSS/JS site which interacts with the REST API. The
-content files are embedded using github.com/aprice/embed, and served directly by
-the application.
+content files are embedded using `github.com/aprice/embed`, and served directly by
+the application. Given the `dev` build tag, static files will be served from disk,
+assuming the working directory is the `github.com/aprice/freenote` root.

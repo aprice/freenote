@@ -25,8 +25,8 @@ func (s *Server) doSession(w http.ResponseWriter, r *http.Request) {
 	db, _ := store.FromContext(r.Context())
 	switch r.Method {
 	case http.MethodOptions:
-		w.Header().Add("Allow", "GET, POST, DELETE")
-		w.WriteHeader(http.StatusNoContent)
+		s.preflight(w, r, nil, http.MethodGet, http.MethodPost, http.MethodDelete)
+		return
 	case http.MethodGet:
 		user, loggedIn := users.FromContext(r.Context())
 		if !loggedIn || user.ID == uuid.Nil {
@@ -118,8 +118,8 @@ func (s *Server) doUsers(w http.ResponseWriter, r *http.Request) {
 	user, _ := users.FromContext(r.Context())
 	switch r.Method {
 	case http.MethodOptions:
-		w.Header().Add("Allow", "GET, POST")
-		w.WriteHeader(http.StatusNoContent)
+		s.preflight(w, r, nil, http.MethodGet, http.MethodPost)
+		return
 	case http.MethodGet:
 		if user.Access < users.LevelAdmin {
 			handleError(w, errUnauthorized)
@@ -217,8 +217,8 @@ func (s *Server) doUser(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodOptions:
-		w.Header().Add("Allow", "GET, PUT, DELETE")
-		w.WriteHeader(http.StatusNoContent)
+		s.preflight(w, r, nil, http.MethodGet, http.MethodPut, http.MethodDelete)
+		return
 	case http.MethodGet:
 		self := owner.ID == user.ID
 		sendResponse(w, r, decorateUser(owner, self, self, s.conf), http.StatusOK)
@@ -263,8 +263,8 @@ func (s *Server) doPassword(w http.ResponseWriter, r *http.Request) {
 	owner, _ := users.OwnerFromContext(r.Context())
 	switch r.Method {
 	case http.MethodOptions:
-		w.Header().Add("Allow", http.MethodPut)
-		w.WriteHeader(http.StatusNoContent)
+		s.preflight(w, r, nil, http.MethodPut)
+		return
 	case http.MethodPut:
 		var err error
 		if owner.ID != user.ID && user.Access < users.LevelAdmin {
@@ -316,8 +316,8 @@ func (s *Server) doNotes(w http.ResponseWriter, r *http.Request) {
 	defer stats.Measure("req", "notes", r.Method)()
 	switch r.Method {
 	case http.MethodOptions:
-		w.Header().Add("Allow", "GET, POST")
-		w.WriteHeader(http.StatusNoContent)
+		s.preflight(w, r, nil, http.MethodGet, http.MethodPost)
+		return
 	case http.MethodGet:
 		if owner.ID != user.ID && user.Access < users.LevelAdmin {
 			statusResponse(w, http.StatusForbidden)
@@ -397,8 +397,8 @@ func (s *Server) doNote(w http.ResponseWriter, r *http.Request) {
 	defer stats.Measure("req", "note", r.Method)()
 	switch r.Method {
 	case http.MethodOptions:
-		w.Header().Add("Allow", "GET, PUT, DELETE")
-		w.WriteHeader(http.StatusNoContent)
+		s.preflight(w, r, nil, http.MethodGet, http.MethodPut, http.MethodDelete)
+		return
 	case http.MethodGet:
 		//TODO: Sharing
 		if owner.ID != user.ID && user.Access < users.LevelAdmin {

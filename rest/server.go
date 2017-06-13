@@ -128,6 +128,8 @@ func (s *Server) Stop() {
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Vary", "Accept")
+
 	db, err := store.NewSession(s.conf)
 	if handleError(w, err) {
 		return
@@ -175,6 +177,39 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		doDebug(w, r)
 	default:
 		s.fs.ServeHTTP(w, r)
+	}
+}
+
+func (s *Server) preflight(w http.ResponseWriter, r *http.Request, body []byte, methods ...string) {
+	methList := strings.ToUpper(strings.Join(methods, ", "))
+	headers := w.Header()
+	reqHeader := r.Header.Get("Access-Control-Request-Headers")
+	if reqHeader == "" {
+		reqHeader = "*"
+	}
+	var origin string
+	if r.TLS == nil {
+		origin = fmt.Sprintf("http://%s:%d", r.Host, s.conf.Port)
+	} else {
+		origin = fmt.Sprintf("https://%s:%d", r.Host, s.conf.TLSPort)
+	}
+
+	headers.Add("Vary", "Origin")
+	headers.Add("Vary", "Access-Control-Request-Methods")
+	headers.Add("Vary", "Access-Control-Request-Headers")
+
+	headers.Set("Allow", methList)
+	headers.Set("Access-Control-Allow-Origin", origin)
+	headers.Set("Access-Control-Allow-Methods", methList)
+	headers.Set("Access-Control-Allow-Headers", reqHeader)
+	headers.Set("Access-Control-Allow-Credentials", "true")
+	headers.Set("Access-Control-Max-Age", "86400")
+
+	if len(body) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+	} else {
+		w.WriteHeader(http.StatusOK)
+		w.Write(body)
 	}
 }
 

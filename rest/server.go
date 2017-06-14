@@ -142,7 +142,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch err {
 	case errNoAuth, nil:
 	case errAuthCookieInvalid:
-		statusResponse(w, http.StatusUnauthorized)
+		http.Error(w, "Unauthorized: Invalid Session Cookie", http.StatusUnauthorized)
+		//statusResponse(w, http.StatusUnauthorized)
 		return
 	default:
 		handleError(w, err)

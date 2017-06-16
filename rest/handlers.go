@@ -158,13 +158,13 @@ func (s *Server) doUsers(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if err = db.UserStore().SaveUser(&newUser); handleError(w, err) {
-			log.Println("error saving user")
+			log.Println("error saving user: ", err)
 			return
 		}
 		wn := notes.WelcomeNote(newUser.ID)
 		err = db.NoteStore().SaveNote(&wn)
 		if err != nil {
-			log.Println("Saving welcome note failed: ", err)
+			log.Println("saving welcome note failed: ", err)
 		}
 		pl := struct {
 			decoratedUser

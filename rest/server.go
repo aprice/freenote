@@ -154,11 +154,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		user.CleanSessions()
 		db.UserStore().SaveUser(&user)
 	}
-	ok, err := s.authorize(r, user)
-	if handleError(w, err) {
-		return
-	}
-	if !ok {
+	if !s.authorize(r.URL.Path, user) {
 		if user.Access == users.LevelAnon {
 			statusResponse(w, http.StatusUnauthorized)
 		} else {

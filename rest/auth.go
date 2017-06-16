@@ -9,6 +9,7 @@ import (
 
 	uuid "github.com/satori/go.uuid"
 
+	"github.com/aprice/freenote/ids"
 	"github.com/aprice/freenote/store"
 	"github.com/aprice/freenote/users"
 )
@@ -62,25 +63,29 @@ func (s *Server) authenticate(w http.ResponseWriter, r *http.Request, us store.U
 	return users.User{}, errNoAuth
 }
 
-var userOwnedPat = regexp.MustCompile("/users/([^/]+)/?.*")
+var userOwnedPat = regexp.MustCompile("/users/([^/]+).*")
 
 // General authz based on path & method with no object details, prevents 404 fishing
-func (s *Server) authorize(r *http.Request, user users.User) (bool, error) {
-	if pts := userOwnedPat.FindStringSubmatch(r.URL.Path); len(pts) > 0 {
-		if pts[0] == user.ID.String() || pts[0] == user.Username {
-			return true, nil
+func (s *Server) authorize(path string, user users.User) bool {
+	if pts := userOwnedPat.FindStringSubmatch(path); len(pts) > 1 {
+		if pts[1] == user.Username {
+			return true
+		}
+		id, err := ids.ParseID(pts[1])
+		if err == nil && id == user.ID {
+			return true
 		} else if user.Access >= users.LevelAdmin {
-			return true, nil
+			return true
 		}
 		//TODO: Sharing!
-		return false, nil
-	} else if r.URL.Path == "/users/" || r.URL.Path == "/users" {
+		return false
+	} else if path == "/users/" || path == "/users" {
 		if user.Access >= users.LevelAdmin {
-			return true, nil
+			return true
 		}
-		return false, nil
+		return false
 	}
-	return true, nil
+	return true
 }
 
 func parseSessionCookie(r *http.Request) (users.Session, error) {

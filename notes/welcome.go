@@ -6,6 +6,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
+// WelcomeNote creates a new welcome note for the given user.
 func WelcomeNote(userID uuid.UUID) Note {
 	return Note{
 		ID:       uuid.NewV4(),

@@ -6,6 +6,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
+// Note is a specific user-owned document.
 type Note struct {
 	ID       uuid.UUID `json:"id" xml:"id,attr" bson:"_id"`
 	Folder   string    `json:"path" xml:"folder,attr,omitempty" storm:"index"`

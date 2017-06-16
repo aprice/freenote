@@ -5,6 +5,7 @@ import (
 	"os"
 )
 
+// Config holds all runtime configuration details.
 type Config struct {
 	Port               int
 	TLSPort            int
@@ -24,8 +25,10 @@ type Config struct {
 	BoltDB   string
 }
 
+// NilConfig is an empty Configuration (zero value).
 var NilConfig = Config{}
 
+// ConnectionInfo encapsulates details for connecting to an outside resource.
 type ConnectionInfo struct {
 	Host      string
 	User      string
@@ -33,8 +36,10 @@ type ConnectionInfo struct {
 	Namespace string
 }
 
+// NilConnection is an empty ConnectionInfo (zero value).
 var NilConnection = ConnectionInfo{}
 
+// Configure reads in the config file at the given path and returns it.
 func Configure(path string) (Config, error) {
 	c := &Config{
 		Port:    80,

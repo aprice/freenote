@@ -24,6 +24,7 @@ import (
 	"github.com/microcosm-cc/bluemonday"
 )
 
+// Server handles HTTP requests.
 type Server struct {
 	conf      config.Config
 	fs        http.Handler
@@ -53,6 +54,7 @@ func popSegment(r *http.Request) string {
 	return seg
 }
 
+// NewServer creates a new HTTP Server with the given configuration.
 func NewServer(conf config.Config) (*Server, error) {
 	s := &Server{
 		conf:      conf,
@@ -93,6 +95,7 @@ func NewServer(conf config.Config) (*Server, error) {
 	return s, nil
 }
 
+// Start the server (HTTP and HTTPS, if configured)
 func (s *Server) Start() {
 	go func() {
 		log.Printf("http listening on %d", s.conf.Port)
@@ -106,6 +109,7 @@ func (s *Server) Start() {
 	}
 }
 
+// Stop the server, allowing requests in flight to finish first.
 func (s *Server) Stop() {
 	wg := new(sync.WaitGroup)
 	wg.Add(1)
@@ -127,6 +131,7 @@ func (s *Server) Stop() {
 	wg.Wait()
 }
 
+// ServeHTTP fulfills http.Handler.
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Vary", "Accept")
 

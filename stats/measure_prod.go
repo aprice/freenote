@@ -15,6 +15,7 @@ func Measure(names ...string) func() {
 	return func() {}
 }
 
+// Run the synchronous measurement routine.
 func Run() func() {
 	return func() {}
 }

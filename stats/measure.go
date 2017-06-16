@@ -58,6 +58,7 @@ type sentinel struct{}
 
 var nothing = sentinel{}
 
+// Run the synchronous measurement routine.
 func Run() func() {
 	stop := make(chan sentinel)
 	go func() {

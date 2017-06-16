@@ -7,6 +7,8 @@ import (
 	"strings"
 )
 
+// Page represents the details of a request for a specific page in a collection
+// of entities.
 type Page struct {
 	Start          int    `json:"start"`
 	Length         int    `json:"legth"`
@@ -15,6 +17,7 @@ type Page struct {
 	SortBy         string `json:"-"`
 }
 
+// QueryString returns the query string to retrieve this Page.
 func (p Page) QueryString() string {
 	var direction string
 	if p.SortDescending {
@@ -28,6 +31,8 @@ func (p Page) QueryString() string {
 		url.QueryEscape(direction))
 }
 
+// FromQueryString fills this Page's fields with values from the given URL's
+// query string.
 func (p *Page) FromQueryString(u *url.URL, sortFields []string) {
 	var (
 		i   int
@@ -55,6 +60,8 @@ func (p *Page) FromQueryString(u *url.URL, sortFields []string) {
 	}
 }
 
+// FromQueryString returns a Page filled with values from the given URL's query
+// string.
 func FromQueryString(u *url.URL, sortFields []string, defaultDescending bool) Page {
 	p := Page{}
 	i, err := strconv.Atoi(u.Query().Get("start"))

@@ -12,6 +12,7 @@ func init() {
 	}))
 }
 
+// Operation holds the details of a measured operation.
 type Operation struct {
 	Name    string
 	Elapsed time.Duration

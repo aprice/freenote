@@ -47,6 +47,8 @@ type UserStore interface {
 	DeleteUser(id uuid.UUID) error
 }
 
+// NewSession returns a new database session for the given configuration,
+// including selecting the appropriate database driver.
 func NewSession(conf config.Config) (Session, error) {
 	if conf.BoltDB != "" {
 		return NewStormStore(conf)
@@ -58,12 +60,14 @@ func NewSession(conf config.Config) (Session, error) {
 
 type contextKey int
 
-var sessionKey contextKey = 0
+var sessionKey contextKey = 1
 
+// NewContext returns a new Context including the given Session.
 func NewContext(ctx context.Context, sess Session) context.Context {
 	return context.WithValue(ctx, sessionKey, sess)
 }
 
+// FromContext returns the Session in the given Context, if it is set.
 func FromContext(ctx context.Context) (Session, bool) {
 	sess, ok := ctx.Value(sessionKey).(Session)
 	return sess, ok

@@ -26,9 +26,8 @@ func (s *Server) authenticate(w http.ResponseWriter, r *http.Request, us store.U
 			user, err := users.AuthenticateAdmin(pass)
 			if err != nil {
 				return users.User{}, err
-			} else {
-				return user, nil
 			}
+			return user, nil
 		}
 		user, err := us.UserByName(uname)
 		if err != nil {

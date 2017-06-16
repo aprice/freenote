@@ -22,18 +22,19 @@ var ErrPasswordTooLong = fmt.Errorf("password exceeds maximum length %d", maxPas
 var ErrPasswordTooRepetitive = errors.New("password is too repetitive")
 var ErrPasswordTooCommon = errors.New("password is too common")
 
+// InitCommonPasswords reads in the configured list of common passwords.
 func InitCommonPasswords(conf config.Config) error {
 	if conf.CommonPasswordList != "" {
 		f, err := os.Open(conf.CommonPasswordList)
 		if err != nil {
 			return err
 		}
-		return ReadCommonPasswords(f)
+		return readCommonPasswords(f)
 	}
 	return nil
 }
 
-func ReadCommonPasswords(r io.Reader) error {
+func readCommonPasswords(r io.Reader) error {
 	if commonPasswords != nil {
 		return nil
 	}
@@ -50,6 +51,7 @@ func ReadCommonPasswords(r io.Reader) error {
 	return nil
 }
 
+// ValidatePassword against the password rules.
 func ValidatePassword(password string) error {
 	byteLen := len(password)
 	charLen := utf8.RuneCountInString(password)

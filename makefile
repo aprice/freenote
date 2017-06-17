@@ -30,7 +30,6 @@
 
 # Parameters
 PKG = github.com/aprice/freenote
-NAME = myapp
 DOC = README.md LICENSE
 
 
@@ -61,7 +60,7 @@ BENCHCPUS ?= 1,2,4
 GOCMD = go
 ARCHES ?= 386 amd64
 OSES ?= windows linux darwin
-OUTTPL = $(DISTDIR)/$(NAME)-$(VERSION)-{{.OS}}_{{.Arch}}/{{.Dir}}
+OUTTPL = $(DISTDIR)/{{.Dir}}-$(VERSION)-{{.OS}}_{{.Arch}}/{{.Dir}}
 LDFLAGS = -X $(PKG).Version=$(VERSION) -X $(PKG).Build=$(COMMIT_ID)
 GOBUILD = gox -rebuild -gocmd="$(GOCMD)" -arch="$(ARCHES)" -os="$(OSES)" -output="$(OUTTPL)" -tags "$(BUILD_TAGS)" -ldflags "$(LDFLAGS)"
 GOCLEAN = $(GOCMD) clean
@@ -72,7 +71,7 @@ GODEP = $(GOCMD) get -d -t
 GOFMT = goreturns -w
 GOBENCH = $(GOCMD) test -v -tags "$(BUILD_TAGS)" -cpu=$(BENCHCPUS) -run=NOTHING -bench=. -benchmem -outputdir "$(RPTDIR)"
 GZCMD = tar -czf
-ZIPCMD = zip
+ZIPCMD = zip -r
 SHACMD = sha256sum
 SLOCCMD = cloc --by-file --xml --exclude-dir="vendor" --include-lang="Go"
 XUCMD = go2xunit
@@ -107,9 +106,9 @@ dep:
 	$(GODEP) $(PKG)/...
 lint: setup-dirs dep
 	$(GOLINT) "$(PKGDIR)/..." | tee "$(RPTDIR)/lint.out"
-check: setup-dirs clean dep
+check: setup-dirs dep
 	$(GOTEST) $$(go list "$(PKG)/..." | grep -v /vendor/) | tee "$(RPTDIR)/test.out"
-bench: setup-dirs clean dep
+bench: setup-dirs dep
 	$(GOBENCH) $$(go list "$(PKG)/..." | grep -v /vendor/) | tee "$(RPTDIR)/bench.out"
 report: check
 	cd "$(PKGDIR)";$(SLOCCMD) --out="$(RPTDIR)/cloc.xml" . | tee "$(RPTDIR)/cloc.out"
@@ -122,7 +121,7 @@ install: $(INSTALL_TARGETS)
 $(INSTALL_TARGETS):
 	$(GOINSTALL) "$(CMDPKG)/$(subst install-,,$@)"
 
-dist: clean build
+dist: build
 	for docfile in $(DOC); do \
 		for dir in "$(DISTDIR)"/*; do \
 			cp "$(PKGDIR)/$$docfile" "$$dir/"; \

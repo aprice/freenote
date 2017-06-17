@@ -6,7 +6,7 @@ package stats
 func Record(op Operation) {
 }
 
-// Record an operation failing
+// RecordError records an operation failing
 func RecordError(name string) {
 }
 

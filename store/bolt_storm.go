@@ -13,6 +13,7 @@ import (
 	"github.com/aprice/freenote/users"
 )
 
+// NewStormStore initializes a new Storm/Bolt data store.
 func NewStormStore(conf config.Config) (Session, error) {
 	db, err := storm.Open(conf.BoltDB)
 	if err != nil {
@@ -21,36 +22,44 @@ func NewStormStore(conf config.Config) (Session, error) {
 	return &StormStore{db}, nil
 }
 
+// StormStore handles the Storm/Bolt backing store.
 type StormStore struct {
 	db *storm.DB
 }
 
+// NoteStore returns the NoteStore for this session.
 func (s *StormStore) NoteStore() NoteStore {
 	store := &StormNoteStore{s.db.From("notes")}
 	store.db.Init(&notes.Note{})
 	return store
 }
 
+// UserStore returns the UserStore for this session.
 func (s *StormStore) UserStore() UserStore {
 	store := &StormUserStore{s.db.From("users")}
 	store.db.Init(&users.User{})
 	return store
 }
 
+// Close this session.
 func (s *StormStore) Close() error {
 	return s.db.Close()
 }
 
+// StormNoteStore handles the Storm/Bolt backed Note store.
 type StormNoteStore struct {
 	db storm.Node
 }
 
+// NoteByID retrieves a single note by its unique ID.
 func (s *StormNoteStore) NoteByID(id uuid.UUID) (notes.Note, error) {
 	var result notes.Note
 	err := s.db.One("ID", id, &result)
 	return result, stormError(err)
 }
 
+// NotesByOwner retrieves a page of notes by owner ID. It returns the page of
+// notes and the total number of notes owned by the given user.
 func (s *StormNoteStore) NotesByOwner(userID uuid.UUID, page page.Page) ([]notes.Note, int, error) {
 	var result []notes.Note
 	qry := s.db.Select(q.Eq("Owner", userID))
@@ -64,6 +73,9 @@ func (s *StormNoteStore) NotesByOwner(userID uuid.UUID, page page.Page) ([]notes
 	return result, total, stormError(err)
 }
 
+// NotesByFolder retrieves a page of notes with a given owner and folder. It
+// returns the page of notes and the total number of notes with the given owner
+// and folder.
 func (s *StormNoteStore) NotesByFolder(userID uuid.UUID, folder string, page page.Page) ([]notes.Note, int, error) {
 	var result []notes.Note
 	qry := s.db.Select(q.And(q.Eq("Owner", userID), q.Eq("Folder", folder)))
@@ -75,6 +87,7 @@ func (s *StormNoteStore) NotesByFolder(userID uuid.UUID, folder string, page pag
 	return result, total, stormError(err)
 }
 
+// SaveNote saves a new or updated note to the data store.
 func (s *StormNoteStore) SaveNote(note *notes.Note) error {
 	h := note.HTMLBody
 	note.HTMLBody = ""
@@ -86,27 +99,33 @@ func (s *StormNoteStore) SaveNote(note *notes.Note) error {
 	return err
 }
 
+// DeleteNote deletes the note with the given ID from the data store.
 func (s *StormNoteStore) DeleteNote(id uuid.UUID) error {
 	err := s.db.Select(q.Eq("ID", id)).Delete(new(notes.Note))
 	return stormError(err)
 }
 
+// StormUserStore handles the Storm/Bolt backed Note store.
 type StormUserStore struct {
 	db storm.Node
 }
 
+// UserByID retrieves a single user by its unique ID
 func (s *StormUserStore) UserByID(id uuid.UUID) (users.User, error) {
 	var result users.User
 	err := s.db.One("ID", id, &result)
 	return result, stormError(err)
 }
 
+// UserByName retrieves a single user by its unique username.
 func (s *StormUserStore) UserByName(username string) (users.User, error) {
 	var result users.User
 	err := s.db.One("Username", username, &result)
 	return result, stormError(err)
 }
 
+// Users retrieves a page of users. It returns the page of users and the total
+// number of users.
 func (s *StormUserStore) Users(page page.Page) ([]users.User, int, error) {
 	var result []users.User
 	qry := s.db.Select()
@@ -118,6 +137,7 @@ func (s *StormUserStore) Users(page page.Page) ([]users.User, int, error) {
 	return result, total, stormError(err)
 }
 
+// SaveUser saves a new or updated user to the data store.
 func (s *StormUserStore) SaveUser(user *users.User) error {
 	err := s.db.Save(user)
 	if err == storm.ErrAlreadyExists {
@@ -126,6 +146,7 @@ func (s *StormUserStore) SaveUser(user *users.User) error {
 	return err
 }
 
+// DeleteUser deletes a user with the given ID from the data store.
 func (s *StormUserStore) DeleteUser(id uuid.UUID) error {
 	err := s.db.Select(q.Eq("ID", id)).Delete(new(users.User))
 	return stormError(err)

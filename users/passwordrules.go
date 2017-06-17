@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sync"
 	"unicode/utf8"
 
 	"github.com/aprice/freenote/config"
@@ -22,22 +23,25 @@ var ErrPasswordTooLong = fmt.Errorf("password exceeds maximum length %d", maxPas
 var ErrPasswordTooRepetitive = errors.New("password is too repetitive")
 var ErrPasswordTooCommon = errors.New("password is too common")
 
+var initOnce = new(sync.Once)
+
 // InitCommonPasswords reads in the configured list of common passwords.
 func InitCommonPasswords(conf config.Config) error {
-	if conf.CommonPasswordList != "" {
-		f, err := os.Open(conf.CommonPasswordList)
-		if err != nil {
-			return err
+	var err error
+	initOnce.Do(func() {
+		if conf.CommonPasswordList != "" {
+			var f *os.File
+			f, err = os.Open(conf.CommonPasswordList)
+			if err != nil {
+				return
+			}
+			err = readCommonPasswords(f)
 		}
-		return readCommonPasswords(f)
-	}
-	return nil
+	})
+	return err
 }
 
 func readCommonPasswords(r io.Reader) error {
-	if commonPasswords != nil {
-		return nil
-	}
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
 		pw := scanner.Text()

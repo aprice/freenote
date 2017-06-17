@@ -31,7 +31,7 @@
 # Parameters
 PKG = github.com/aprice/freenote
 NAME = myapp
-DOC = README LICENSE
+DOC = README.md LICENSE
 
 
 # Replace backslashes with forward slashes for use on Windows.

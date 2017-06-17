@@ -24,13 +24,13 @@ func NewContext(ctx context.Context, u Note) context.Context {
 	return context.WithValue(ctx, noteKey, u)
 }
 
-// FromContext reads a note ID from the given Context, if it is set.
+// IDFromContext reads a note ID from the given Context, if it is set.
 func IDFromContext(ctx context.Context) (uuid.UUID, bool) {
 	id, ok := ctx.Value(noteIDKey).(uuid.UUID)
 	return id, ok
 }
 
-// NewContext creates a new Context including the given note ID and returns it.
+// NewIDContext creates a new Context including the given note ID and returns it.
 func NewIDContext(ctx context.Context, id uuid.UUID) context.Context {
 	return context.WithValue(ctx, noteIDKey, id)
 }

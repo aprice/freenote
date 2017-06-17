@@ -29,6 +29,7 @@ func initMongoDB(conf config.Config) error {
 	return err
 }
 
+// NewMongoStore initializes a new Storm/Bolt data store.
 func NewMongoStore(conf config.Config) (Session, error) {
 	if session == nil {
 		err := initMongoDB(conf)
@@ -46,35 +47,41 @@ func NewMongoStore(conf config.Config) (Session, error) {
 var _ Session = (*MongoStore)(nil)
 var _ io.Closer = (*MongoStore)(nil)
 
+// MongoStore handles the MongoDB backing store.
 type MongoStore struct {
 	db *mgo.Database
 }
 
+// NoteStore returns the NoteStore for this session.
 func (s *MongoStore) NoteStore() NoteStore {
 	return &MongoNoteStore{s.db.C("Notes")}
 }
 
+// UserStore returns the UserStore for this session.
 func (s *MongoStore) UserStore() UserStore {
 	return &MongoUserStore{s.db.C("Users")}
 }
 
+// Close this session.
 func (s *MongoStore) Close() error {
 	s.db.Session.Close()
 	return nil
 }
 
-var _ NoteStore = (*MongoNoteStore)(nil)
-
+// MongoNoteStore handles the MongoDB-backed Note store.
 type MongoNoteStore struct {
 	c *mgo.Collection
 }
 
+// NoteByID retrieves a single note by its unique ID.
 func (s *MongoNoteStore) NoteByID(id uuid.UUID) (notes.Note, error) {
 	var result notes.Note
 	err := s.c.FindId(id).One(&result)
 	return result, mongoError(err)
 }
 
+// NotesByOwner retrieves a page of notes by owner ID. It returns the page of
+// notes and the total number of notes owned by the given user.
 func (s *MongoNoteStore) NotesByOwner(userID uuid.UUID, page page.Page) ([]notes.Note, int, error) {
 	result := []notes.Note{}
 	q := s.c.Find(bson.M{"owner": userID})
@@ -90,6 +97,9 @@ func (s *MongoNoteStore) NotesByOwner(userID uuid.UUID, page page.Page) ([]notes
 	return result, total, mongoError(err)
 }
 
+// NotesByFolder retrieves a page of notes with a given owner and folder. It
+// returns the page of notes and the total number of notes with the given owner
+// and folder.
 func (s *MongoNoteStore) NotesByFolder(userID uuid.UUID, folder string, page page.Page) ([]notes.Note, int, error) {
 	result := []notes.Note{}
 	q := s.c.Find(bson.M{"owner": userID, "folder": folder})
@@ -105,6 +115,7 @@ func (s *MongoNoteStore) NotesByFolder(userID uuid.UUID, folder string, page pag
 	return result, total, mongoError(err)
 }
 
+// FoldersByFolder returns the list of folders with the given folder prefix.
 func (s *MongoNoteStore) FoldersByFolder(userID uuid.UUID, folder string) ([]string, error) {
 	result := []string{}
 	err := s.c.Find(bson.M{"owner": userID, "folder": folder}).Sort("folder").Distinct("folder", &result)
@@ -114,6 +125,9 @@ func (s *MongoNoteStore) FoldersByFolder(userID uuid.UUID, folder string) ([]str
 	return result, mongoError(err)
 }
 
+// NotesByTag retrieves a page of notes with a given owner and tag. It returns
+// the page of notes and the total number of notes with the given owner and
+// folder.
 func (s *MongoNoteStore) NotesByTag(userID uuid.UUID, tag string, page page.Page) ([]notes.Note, error) {
 	result := []notes.Note{}
 	//TODO: Allow controlled sort field & direction
@@ -124,7 +138,8 @@ func (s *MongoNoteStore) NotesByTag(userID uuid.UUID, tag string, page page.Page
 	return result, mongoError(err)
 }
 
-func (s *MongoNoteStore) Tags(userID uuid.UUID, page page.Page) ([]string, error) {
+// Tags returns the list of tags used by the given user.
+func (s *MongoNoteStore) Tags(userID uuid.UUID) ([]string, error) {
 	result := []string{}
 	err := s.c.Find(bson.M{"owner": userID}).Distinct("tags", &result)
 	if err == nil && len(result) == 0 {
@@ -133,6 +148,7 @@ func (s *MongoNoteStore) Tags(userID uuid.UUID, page page.Page) ([]string, error
 	return result, mongoError(err)
 }
 
+// SaveNote saves a new or updated note to the data store.
 func (s *MongoNoteStore) SaveNote(note *notes.Note) error {
 	if note.ID == uuid.Nil {
 		note.ID = uuid.NewV4()
@@ -141,29 +157,33 @@ func (s *MongoNoteStore) SaveNote(note *notes.Note) error {
 	return mongoError(err)
 }
 
+// DeleteNote deletes the note with the given ID from the data store.
 func (s *MongoNoteStore) DeleteNote(id uuid.UUID) error {
 	err := s.c.Remove(bson.M{"_id": id})
 	return mongoError(err)
 }
 
-var _ UserStore = (*MongoUserStore)(nil)
-
+// MongoUserStore handles the MongoDB-backed Note store.
 type MongoUserStore struct {
 	c *mgo.Collection
 }
 
+// UserByID retrieves a single user by its unique ID
 func (s *MongoUserStore) UserByID(id uuid.UUID) (users.User, error) {
 	var result users.User
 	err := s.c.FindId(id).One(&result)
 	return result, mongoError(err)
 }
 
+// UserByName retrieves a single user by its unique username.
 func (s *MongoUserStore) UserByName(username string) (users.User, error) {
 	var result users.User
 	err := s.c.Find(bson.M{"username": username}).One(&result)
 	return result, mongoError(err)
 }
 
+// Users retrieves a page of users. It returns the page of users and the total
+// number of users.
 func (s *MongoUserStore) Users(page page.Page) ([]users.User, int, error) {
 	result := []users.User{}
 	q := s.c.Find(nil)
@@ -179,6 +199,7 @@ func (s *MongoUserStore) Users(page page.Page) ([]users.User, int, error) {
 	return result, total, mongoError(err)
 }
 
+// SaveUser saves a new or updated user to the data store.
 func (s *MongoUserStore) SaveUser(user *users.User) error {
 	if user.ID == uuid.Nil {
 		user.ID = uuid.NewV4()
@@ -187,6 +208,7 @@ func (s *MongoUserStore) SaveUser(user *users.User) error {
 	return mongoError(err)
 }
 
+// DeleteUser deletes a user with the given ID from the data store.
 func (s *MongoUserStore) DeleteUser(id uuid.UUID) error {
 	err := s.c.Remove(bson.M{"_id": id})
 	return mongoError(err)

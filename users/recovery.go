@@ -4,6 +4,8 @@ import (
 	"time"
 )
 
+// RecoveryPeriod is the Duration that the recovery user will be able to log in
+// after the server starts up.
 const RecoveryPeriod = 30 * time.Minute
 
 var recoveryMode = struct {
@@ -11,6 +13,7 @@ var recoveryMode = struct {
 	expires time.Time
 }{}
 
+// RecoveryAdminName is the username for the recovery user.
 const RecoveryAdminName = "_admin"
 
 // RecoveryMode initializes recovery mode, creating a temporary admin account,

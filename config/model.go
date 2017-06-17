@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"os"
+	"strings"
 )
 
 // Config holds all runtime configuration details.
@@ -10,6 +11,7 @@ type Config struct {
 	Port               int
 	TLSPort            int
 	BaseURI            string
+	ForceTLS           bool
 	RecoveryMode       bool
 	CommonPasswordList string
 
@@ -50,5 +52,11 @@ func Configure(path string) (Config, error) {
 		return NilConfig, err
 	}
 	err = json.NewDecoder(f).Decode(c)
-	return *c, err
+	if err != nil {
+		return NilConfig, err
+	}
+	if c.ForceTLS {
+		c.BaseURI = strings.Replace(c.BaseURI, "http://", "https://", 1)
+	}
+	return *c, nil
 }

@@ -33,27 +33,6 @@ type Server struct {
 	tlsSvr    *http.Server
 }
 
-func firstSegment(path string) string {
-	path = strings.Trim(path, "/")
-	if idx := strings.Index(path, "/"); idx > 0 {
-		return path[:idx]
-	}
-	return path
-}
-
-func stripSegment(r *http.Request) {
-	r.URL.Path = strings.TrimPrefix(r.URL.Path, "/"+firstSegment(r.URL.Path))
-}
-
-func popSegment(r *http.Request) string {
-	seg := firstSegment(r.URL.Path)
-	r.URL.Path = strings.TrimPrefix(r.URL.Path, "/"+seg)
-	if r.URL.Path == "" {
-		r.URL.Path = "/"
-	}
-	return seg
-}
-
 // NewServer creates a new HTTP Server with the given configuration.
 func NewServer(conf config.Config) (*Server, error) {
 	s := &Server{
@@ -133,6 +112,12 @@ func (s *Server) Stop() {
 
 // ServeHTTP fulfills http.Handler.
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if s.conf.ForceTLS && r.TLS == nil && r.Header.Get("X-Forwarded-Proto") != "https" {
+		u := s.conf.BaseURI + r.URL.Path
+		http.Redirect(w, r, u, http.StatusFound)
+		return
+	}
+
 	w.Header().Add("Vary", "Accept")
 
 	db, err := store.NewSession(s.conf)
@@ -215,6 +200,21 @@ func (s *Server) preflight(w http.ResponseWriter, r *http.Request, body []byte, 
 	}
 }
 
+func (s *Server) baseURI(r *http.Request) string {
+	if s.conf.ForceTLS {
+		return s.conf.BaseURI
+	}
+	u := strings.TrimPrefix(s.conf.BaseURI, "http")
+	u = strings.TrimPrefix(u, "s")
+	if p := r.Header.Get("X-Forwarded-Proto"); p != "" {
+		return p + u
+	}
+	if r.TLS == nil {
+		return "http" + u
+	}
+	return "https" + u
+}
+
 func statusResponse(w http.ResponseWriter, statusCode int) {
 	http.Error(w, http.StatusText(statusCode), statusCode)
 }
@@ -250,4 +250,25 @@ func badRequest(w http.ResponseWriter, err error) bool {
 		return true
 	}
 	return false
+}
+
+func firstSegment(path string) string {
+	path = strings.Trim(path, "/")
+	if idx := strings.Index(path, "/"); idx > 0 {
+		return path[:idx]
+	}
+	return path
+}
+
+func stripSegment(r *http.Request) {
+	r.URL.Path = strings.TrimPrefix(r.URL.Path, "/"+firstSegment(r.URL.Path))
+}
+
+func popSegment(r *http.Request) string {
+	seg := firstSegment(r.URL.Path)
+	r.URL.Path = strings.TrimPrefix(r.URL.Path, "/"+seg)
+	if r.URL.Path == "" {
+		r.URL.Path = "/"
+	}
+	return seg
 }

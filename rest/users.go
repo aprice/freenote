@@ -3,7 +3,6 @@ package rest
 import (
 	"fmt"
 
-	"github.com/aprice/freenote/config"
 	"github.com/aprice/freenote/page"
 	"github.com/aprice/freenote/users"
 )
@@ -14,14 +13,14 @@ type decoratedUser struct {
 	XMLName struct{} `json:"-" xml:"User"`
 }
 
-func decorateUser(user users.User, canReadNotes, canWrite bool, conf config.Config) decoratedUser {
+func decorateUser(user users.User, canReadNotes, canWrite bool, baseURI string) decoratedUser {
 	links := Links{}
-	links.RecordRUD(fmt.Sprintf("%s/users/%s", conf.BaseURI, user.ID), canWrite)
+	links.RecordRUD(fmt.Sprintf("%s/users/%s", baseURI, user.ID), canWrite)
 	if canReadNotes {
 		links.Add(Link{
 			Rel:    "notes",
 			Method: "GET",
-			Href:   fmt.Sprintf("%s/users/%s/notes", conf.BaseURI, user.ID),
+			Href:   fmt.Sprintf("%s/users/%s/notes", baseURI, user.ID),
 		})
 	}
 	user.Password = nil
@@ -35,12 +34,12 @@ type decoratedUsers struct {
 	XMLName struct{}     `json:"-" xml:"Users"`
 }
 
-func decorateUsers(values []users.User, page page.Page, canWrite bool, conf config.Config) decoratedUsers {
+func decorateUsers(values []users.User, page page.Page, canWrite bool, baseURI string) decoratedUsers {
 	for i := range values {
 		values[i].Password = nil
 		values[i].Sessions = nil
 	}
 	links := Links{}
-	links.CollectionCR(fmt.Sprintf("%s/users", conf.BaseURI), page, canWrite)
+	links.CollectionCR(fmt.Sprintf("%s/users", baseURI), page, canWrite)
 	return decoratedUsers{Users: values, Links: links}
 }

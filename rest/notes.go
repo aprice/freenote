@@ -8,7 +8,6 @@ import (
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/russross/blackfriday"
 
-	"github.com/aprice/freenote/config"
 	"github.com/aprice/freenote/notes"
 	"github.com/aprice/freenote/page"
 	"github.com/aprice/freenote/users"
@@ -20,12 +19,12 @@ type decoratedNote struct {
 	XMLName struct{} `json:"-" xml:"Note"`
 }
 
-func decorateNote(note notes.Note, canWrite bool, conf config.Config) decoratedNote {
+func decorateNote(note notes.Note, canWrite bool, baseURI string) decoratedNote {
 	links := Links{}
-	links.RecordRUD(fmt.Sprintf("%s/users/%s/notes/%s", conf.BaseURI, note.Owner, note.ID), canWrite)
+	links.RecordRUD(fmt.Sprintf("%s/users/%s/notes/%s", baseURI, note.Owner, note.ID), canWrite)
 	links.Add(Link{
 		Rel:  "author",
-		Href: fmt.Sprintf("%s/users/%s", conf.BaseURI, note.Owner),
+		Href: fmt.Sprintf("%s/users/%s", baseURI, note.Owner),
 	})
 	return decoratedNote{Note: note, Links: links}
 }
@@ -36,13 +35,13 @@ type decoratedNotes struct {
 	XMLName struct{}     `json:"-" xml:"Notes"`
 }
 
-func decorateNotes(owner users.User, values []notes.Note, folder string, page page.Page, canWrite bool, conf config.Config) decoratedNotes {
+func decorateNotes(owner users.User, values []notes.Note, folder string, page page.Page, canWrite bool, baseURI string) decoratedNotes {
 	links := Links{}
 	var base string
 	if folder == "" {
-		base = fmt.Sprintf("%s/users/%s/notes", conf.BaseURI, owner.ID)
+		base = fmt.Sprintf("%s/users/%s/notes", baseURI, owner.ID)
 	} else {
-		base = fmt.Sprintf("%s/users/%s/notes/%s", conf.BaseURI, owner.ID, folder)
+		base = fmt.Sprintf("%s/users/%s/notes/%s", baseURI, owner.ID, folder)
 	}
 	for i := range values {
 		idx := strings.Index(values[i].Body, "\n")

@@ -89,8 +89,6 @@ function SaveNote(cb) {
 			App.currentNote = payload;
 			App.currentNote.index = note.index;
 			App.notes[note.index] = App.currentNote;
-			App.noteRefresh();
-			App.noteListRefresh();
 			if (cb) cb();
 		},
 		finally: function() {
@@ -109,9 +107,9 @@ function NewNote() {
 			created: new Date(),
 			modified: new Date()
 		};
-		App.notes.push(App.currentNote);
+		App.notes.unshift(App.currentNote);
 		App.noteRefresh();
-		LoadNotes();
+		App.noteListRefresh();
 	});
 }
 

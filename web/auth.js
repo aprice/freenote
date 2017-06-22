@@ -22,9 +22,16 @@ function Logout() {
 			App.user = null;
 			App.notes = null;
 			App.currentNote = null;
-			App.userRefresh();
-			App.noteListRefresh();
+			App.prevPage = null;
+			App.nextPage = null;
+			App.curPage = null;
+			App.createLink = null;
+			App.mode = "md";
+			window.clearInterval(App.refreshInterval);
+			window.clearInterval(App.saveInterval);
 			App.noteRefresh();
+			App.noteListRefresh();
+			App.userRefresh();
 		}
 	});
 }

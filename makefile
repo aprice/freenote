@@ -73,7 +73,7 @@ GOBENCH = $(GOCMD) test -v -tags "$(BUILD_TAGS)" -cpu=$(BENCHCPUS) -run=NOTHING 
 GZCMD = tar -czf
 ZIPCMD = zip -r
 SHACMD = sha256sum
-SLOCCMD = cloc --by-file --xml --exclude-dir="vendor" --include-lang="Go"
+SLOCCMD = cloc --by-file --xml --exclude-dir="vendor" --include-lang="Go,HTML,CSS,JavaScript"
 XUCMD = go2xunit
 
 # Dynamic Targets

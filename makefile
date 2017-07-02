@@ -84,7 +84,7 @@ INSTALL_TARGETS := $(addprefix install-,$(CMDS))
 
 all: debug setup dep format lint test bench build dist
 
-setup: setup-dirs setup-build setup-format setup-lint setup-reports
+setup: setup-dirs setup-build setup-format setup-lint setup-reports setup-gen
 setup-reports: setup-dirs
 	go get github.com/tebeka/go2xunit
 setup-build: setup-dirs
@@ -97,6 +97,8 @@ setup-lint: setup-dirs
 setup-dirs:
 	mkdir -p "$(RPTDIR)"
 	mkdir -p "$(DISTDIR)"
+setup-gen:
+	go get github.com/aprice/embed/cmd/embed
 clean:
 	$(GOCLEAN) $(PKG)
 	rm -rf "$(DISTDIR)"/*
@@ -115,11 +117,12 @@ report: check
 	cd "$(PKGDIR)";$(SLOCCMD) --out="$(RPTDIR)/cloc.xml" . | tee "$(RPTDIR)/cloc.out"
 	cat "$(RPTDIR)/test.out" | $(XUCMD) -output "$(RPTDIR)/tests.xml"
 	go list -f '{{join .Deps "\n"}}' "$(CMDPKG)/..." | sort | uniq | xargs -I {} sh -c "go list -f '{{if not .Standard}}{{.ImportPath}}{{end}}' {} | tee -a '$(RPTDIR)/deps.out'"
-build: $(CMDS)
+gen:
+	$(GOGEN) $(PKG)
+build: gen $(CMDS)
 $(CMDS): setup-dirs dep
-	$(GOGEN)
 	$(GOBUILD) "$(CMDPKG)/$@" | tee "$(RPTDIR)/build-$@.out"
-install: $(INSTALL_TARGETS)
+install: gen $(INSTALL_TARGETS)
 $(INSTALL_TARGETS):
 	$(GOINSTALL) "$(CMDPKG)/$(subst install-,,$@)"
 

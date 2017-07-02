@@ -63,6 +63,7 @@ OSES ?= windows linux darwin
 OUTTPL = $(DISTDIR)/{{.Dir}}-$(VERSION)-{{.OS}}_{{.Arch}}/{{.Dir}}
 LDFLAGS = -X $(PKG).Version=$(VERSION) -X $(PKG).Build=$(COMMIT_ID)
 GOBUILD = gox -rebuild -gocmd="$(GOCMD)" -arch="$(ARCHES)" -os="$(OSES)" -output="$(OUTTPL)" -tags "$(BUILD_TAGS)" -ldflags "$(LDFLAGS)"
+GOGEN = go generate
 GOCLEAN = $(GOCMD) clean
 GOINSTALL = $(GOCMD) install -a -tags "$(BUILD_TAGS)" -ldflags "$(LDFLAGS)"
 GOTEST = $(GOCMD) test -v -tags "$(BUILD_TAGS)"
@@ -116,6 +117,7 @@ report: check
 	go list -f '{{join .Deps "\n"}}' "$(CMDPKG)/..." | sort | uniq | xargs -I {} sh -c "go list -f '{{if not .Standard}}{{.ImportPath}}{{end}}' {} | tee -a '$(RPTDIR)/deps.out'"
 build: $(CMDS)
 $(CMDS): setup-dirs dep
+	$(GOGEN)
 	$(GOBUILD) "$(CMDPKG)/$@" | tee "$(RPTDIR)/build-$@.out"
 install: $(INSTALL_TARGETS)
 $(INSTALL_TARGETS):

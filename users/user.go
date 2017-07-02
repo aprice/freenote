@@ -7,8 +7,13 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
+// ErrAuthenticationFailed indicates authentication failed.
 var ErrAuthenticationFailed = errors.New("authentication failed, incorrect username or password")
+
+// ErrUsernameTooShort indicates a username failed validation for minimum length.
 var ErrUsernameTooShort = errors.New("username too short")
+
+// ErrUsernameTooLong indicates a username failed validation for maximum length.
 var ErrUsernameTooLong = errors.New("username too long")
 
 // SessionLifetime is the duration that a user session will be valid.

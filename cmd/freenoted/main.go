@@ -34,7 +34,8 @@ func main() {
 	}
 
 	if conf.RecoveryMode {
-		pw, err := users.RecoveryMode()
+		var pw string
+		pw, err = users.RecoveryMode()
 		if err != nil {
 			log.Fatal(err)
 		}

@@ -18,9 +18,16 @@ const maxPasswordLength = 128
 
 var commonPasswords = stringset.New()
 
+// ErrPasswordTooShort indicates a password that failed validation for minimum length.
 var ErrPasswordTooShort = fmt.Errorf("password does not meet minimum length %d", minPasswordLength)
+
+// ErrPasswordTooLong indicates a password that failed validation for maximum length.
 var ErrPasswordTooLong = fmt.Errorf("password exceeds maximum length %d", maxPasswordLength)
+
+// ErrPasswordTooRepetitive indicates a password that failed validation for character repetition.
 var ErrPasswordTooRepetitive = errors.New("password is too repetitive")
+
+// ErrPasswordTooCommon indicates a password that failed validation for common passwords.
 var ErrPasswordTooCommon = errors.New("password is too common")
 
 var initOnce = new(sync.Once)

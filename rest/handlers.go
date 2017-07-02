@@ -42,7 +42,8 @@ func (s *Server) doSession(w http.ResponseWriter, r *http.Request) {
 			if handleError(w, err) {
 				return
 			}
-			if ok, err := user.Password.Verify(r.FormValue("password")); !ok || err != nil {
+			var ok bool
+			if ok, err = user.Password.Verify(r.FormValue("password")); !ok || err != nil {
 				http.Error(w, "Authentication Failed", http.StatusUnauthorized)
 				return
 			}
@@ -153,7 +154,7 @@ func (s *Server) doUsers(w http.ResponseWriter, r *http.Request) {
 		if err = users.ValidateUsername(newUser.Username); badRequest(w, err) {
 			return
 		}
-		if _, err := db.UserStore().UserByName(newUser.Username); err == nil {
+		if _, err = db.UserStore().UserByName(newUser.Username); err == nil {
 			badRequest(w, errors.New("username already in use"))
 			return
 		}
@@ -273,7 +274,8 @@ func (s *Server) doPassword(w http.ResponseWriter, r *http.Request) {
 		}
 		pwr := struct{ Password string }{}
 		if r.Header.Get("Content-Type") == "text/plain" {
-			body, err := ioutil.ReadAll(r.Body)
+			var body []byte
+			body, err = ioutil.ReadAll(r.Body)
 			if handleError(w, err) {
 				return
 			}

@@ -92,6 +92,7 @@ func (s *Server) Start() {
 func (s *Server) Stop() {
 	wg := new(sync.WaitGroup)
 	wg.Add(1)
+	// nolint: gas
 	go func() {
 		ctx, cxl := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cxl()
@@ -100,6 +101,7 @@ func (s *Server) Stop() {
 	}()
 	if s.tlsSvr != nil {
 		wg.Add(1)
+		// nolint: gas
 		go func() {
 			ctx, cxl := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cxl()

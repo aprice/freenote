@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path"
 
+	"github.com/aprice/freenote/client"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -17,12 +18,12 @@ A simple CLI tool to make working with Freenote from the command line or other
 applications easier. Add a macro to any editor to send your files to Freenote!
 ©2017 Adrian Price. http://github.com/aprice/freenote`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// Do Stuff Here
+		cmd.HelpFunc()(cmd, args)
 	},
 }
 
 var cfgFile string
-var user string
+var username string
 var password string
 var host string
 
@@ -31,11 +32,12 @@ func Execute() error {
 	return rootCmd.Execute()
 }
 
+// nolint: gas
 func init() {
 	initViper()
 
 	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is $HOME/.freenote/config.json)")
-	rootCmd.PersistentFlags().StringVarP(&user, "user", "u", "", "Freenote account name")
+	rootCmd.PersistentFlags().StringVarP(&username, "user", "u", "", "Freenote account name")
 	rootCmd.PersistentFlags().StringVarP(&password, "password", "p", "", "Freenote account password")
 	rootCmd.PersistentFlags().StringVarP(&host, "host", "H", "", "Freenote server address")
 	viper.BindPFlag("user", rootCmd.PersistentFlags().Lookup("user"))
@@ -45,6 +47,12 @@ func init() {
 	viper.SetDefault("password", "")
 	viper.RegisterAlias("host", "server")
 	viper.SetDefault("server", "localhost")
+}
+
+func initClient() (*client.Client, error) {
+	return client.New(viper.Get("user").(string),
+		viper.Get("password").(string),
+		viper.Get("host").(string))
 }
 
 func initViper() {
@@ -64,10 +72,11 @@ func initViper() {
 		viper.SetConfigName("config")
 	}
 
+	viper.SetEnvPrefix("freenote")
 	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
+		//fmt.Println("Using config file:", viper.ConfigFileUsed())
 	} else {
 		fmt.Println("Error reading config file: ", err)
 	}

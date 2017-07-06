@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"errors"
+	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -43,7 +45,9 @@ func sendResponse(w http.ResponseWriter, r *http.Request, payload interface{}, s
 		}
 		w.Header().Add("Content-Type", ctype)
 		w.WriteHeader(status)
-		w.Write(body)
+		if _, err = w.Write(body); err != nil {
+			log.Println("failed to write response: ", err)
+		}
 	case "application/javascript":
 		callback := r.URL.Query().Get("cb")
 		if callback == "" {
@@ -56,10 +60,9 @@ func sendResponse(w http.ResponseWriter, r *http.Request, payload interface{}, s
 		}
 		w.Header().Add("Content-Type", ctype)
 		w.WriteHeader(status)
-		w.Write([]byte(callback))
-		w.Write([]byte("("))
-		w.Write(body)
-		w.Write([]byte(");"))
+		if _, err = fmt.Fprintf(w, "%s(%s);", callback, body); err != nil {
+			log.Println("failed to write response: ", err)
+		}
 	case "application/xml", "text/xml":
 		body, err := xml.Marshal(payload)
 		if err != nil {
@@ -68,7 +71,9 @@ func sendResponse(w http.ResponseWriter, r *http.Request, payload interface{}, s
 		}
 		w.Header().Add("Content-Type", ctype)
 		w.WriteHeader(status)
-		w.Write(body)
+		if _, err = w.Write(body); err != nil {
+			log.Println("failed to write response: ", err)
+		}
 	//TODO: case "text/html":
 	//TODO: execute simple HTML template based on payload type
 	default:

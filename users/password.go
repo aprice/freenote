@@ -11,6 +11,7 @@ import (
 )
 
 const currentPasswordVersion uint8 = 1
+const maxVerifiablePasswordLen = 128 // greatest length ever allowed by maxPasswordLength
 
 // Password encapsulates all of the data necessary to hash
 // and validate passwords securely.
@@ -65,6 +66,9 @@ func (p Password) Verify(input string) (bool, error) {
 		return false, fmt.Errorf("invalid password, bad salt or hash length")
 	}
 	// Then validate the input matches
+	if len(input) > maxVerifiablePasswordLen {
+		return false, fmt.Errorf("invalid password, too long")
+	}
 	provided := schemes[p.Version].Hash([]byte(input), p.Salt)
 	return bytes.Equal(provided, p.Hash), nil
 }

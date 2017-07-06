@@ -19,6 +19,8 @@ var errAuthFailed = errors.New("authentication failed")
 var errAuthCookieInvalid = errors.New("auth cookie invalid")
 var errUnauthorized = errors.New("unauthorized request")
 
+const failedAuthDelay = 100 * time.Millisecond
+
 // Supported authentication: HTTP Basic, HTTP Bearer, Cookie
 func (s *Server) authenticate(w http.ResponseWriter, r *http.Request, us store.UserStore) (users.User, error) {
 	if uname, pass, ok := r.BasicAuth(); ok {
@@ -33,8 +35,12 @@ func (s *Server) authenticate(w http.ResponseWriter, r *http.Request, us store.U
 		if err != nil {
 			return users.User{}, err
 		}
+		// TODO: Throttle login attempts by user
+		// TODO: Throttle login attempts by source IP
 		ok, err = user.Password.Verify(pass)
 		if err != nil {
+			// Log failed login attempts
+			time.Sleep(failedAuthDelay)
 			return users.User{}, err
 		} else if !ok {
 			return users.User{}, errAuthFailed

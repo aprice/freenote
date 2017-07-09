@@ -17,6 +17,7 @@ import (
 
 	uuid "github.com/satori/go.uuid"
 
+	"github.com/aprice/freenote"
 	"github.com/aprice/freenote/config"
 	"github.com/aprice/freenote/store"
 	"github.com/aprice/freenote/users"
@@ -121,6 +122,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Add("Vary", "Accept")
+	if freenote.Version != "" {
+		w.Header().Add("X-Freenote-Version", freenote.Version+" (build "+freenote.Build+")")
+	}
 
 	db, err := store.NewSession(s.conf)
 	if handleError(w, err) {

@@ -23,6 +23,10 @@ var App = {
 		this.noteTitle = $id("NoteTitle");
 		this.noteBody = $id("NoteBody");
 		this.confirmationPanel = $id("Confirmation");
+
+		if (typeof(Version) != "undefined") {
+			$id("AppVersion").innerText = Version;
+		}
 	},
 
 	userRefresh: function () {

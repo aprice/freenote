@@ -8,6 +8,7 @@
 		<!--link href="small-screen.css" rel="stylesheet" type="text/css" media="screen and (max-height: 300ex, max-width 100em)"/-->
 		<link href="font-awesome.min.css" rel="stylesheet" type="text/css" />
 		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<script src="utils.js" type="application/javascript"></script>
 		<script src="app.js" type="application/javascript"></script>
 		<script src="auth.js" type="application/javascript"></script>
 		<script src="notes.js" type="application/javascript"></script>
@@ -45,7 +46,10 @@
 				</p>
 			</section>
 			<section id="NotePane">
-				<h1 id="NoteTitleHeading"><a id="BackButton" onclick="SelectNote(null)" style="display:none"><i class="fa fa-fw fa-reply"></i></a><span id="NoteTitle" contenteditable="true" onblur="SaveNote()"></span></h1>
+				<h1 id="NoteTitleHeading">
+					<a id="BackButton" onclick="SelectNote(null)" style="display:none"><i class="fa fa-fw fa-reply"></i></a>
+					<span id="NoteTitle" contenteditable="true" onblur="SaveNote()"></span>
+				</h1>
 				<nav id="ToolBar">
 					<ul id="ToolsList">
 						<li id="SaveButton" class="toolButton" onclick="SaveNote()" title="Save">
@@ -59,6 +63,9 @@
 						</li>
 						<li id="DeleteButton" class="toolButton" onclick="DeleteNote()" title="Delete note">
 							<i class="fa fa-fw fa-trash-o"></i>
+						</li>
+						<li id="CopyIDButton" class="toolButton noteIDButton" onclick="CopyNoteID()" title="Click to Copy ID">
+							ID: <span id="NoteID"></span>
 						</li>
 					</ul>
 				</nav>

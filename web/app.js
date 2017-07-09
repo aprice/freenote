@@ -1,34 +1,3 @@
-// general-purpose utilities
-var $id = document.getElementById.bind(document);
-function $(qry,el) {
-	el = el || document;
-	return el.querySelectorAll(qry);
-}
-function $1(qry,el) {
-	return $(qry,el)[0];
-}
-function $el(html) {
-	var tpl = document.createElement('template');
-	tpl.innerHTML = html;
-	return tpl.content.firstChild;
-}
-function $each(qry,el,fn) {
-	if (typeof(el) == "function") {
-		fn = el;
-		el = null;
-	}
-	$(qry,el).forEach(fn);
-}
-function fade(el,ms,step) {
-	if (!step) el.style.opacity = 1;
-	if ((el.style.opacity -= .05) <= 0) {
-		el.style.display = "none";
-		el.style.opacity = 1;
-	} else {
-		setTimeout(function(){fade(el,ms,true)}, ms * .05);
-	}
-}
-
 // core app state & helpers
 var App = {
 	debug: true,
@@ -114,6 +83,7 @@ var App = {
 		this.noteManager.classList.add("noteSelected");
 		this.noteManager.classList.remove("noneSelected");
 		this.noteTitle.innerText = this.currentNote.title;
+		$1("#NoteID", this.noteManager).innerText = uuidToB64(this.currentNote.id);
 		if (this.mode == "html") {
 			$1("#SourceButton i.html-mode", this.noteManager).classList.add("selected");
 			$1("#SourceButton i.md-mode", this.noteManager).classList.remove("selected");

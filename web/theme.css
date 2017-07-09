@@ -282,6 +282,14 @@ a {
 	border-color: #c00;
 }
 
+#CopyIDButton {
+	font-size: .75rem;
+}
+
+.noneSelected #CopyIDButton {
+	display: none;
+}
+
 #Footer {
 	text-align: center;
 	height: 10vh;

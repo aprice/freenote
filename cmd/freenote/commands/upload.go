@@ -33,7 +33,7 @@ func init() {
 
 var uploadCmd = &cobra.Command{
 	Use:   "upload",
-	Short: "Upload a markdown file to Freenote",
+	Short: "Upload a markdown file",
 	Long: `
 freenote upload will upload a markdown note to the Freenote server. Notes will
 be uploaded as new notes by default.`,
@@ -91,7 +91,7 @@ be uploaded as new notes by default.`,
 		if overWriteID != "" {
 			noteID, err := ids.ParseID(overWriteID)
 			if err != nil {
-				fmt.Printf("could not parse ", overWriteID, " as ID: ", err)
+				fmt.Println("could not parse ", overWriteID, " as ID: ", err)
 				os.Exit(1)
 			}
 			n.ID = noteID

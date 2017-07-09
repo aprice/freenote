@@ -24,7 +24,7 @@ func init() {
 
 var downloadCmd = &cobra.Command{
 	Use:   "download [noteID]",
-	Short: "Download a note from Freenote",
+	Short: "Download a note",
 	Long: `
 freenote download will download a note on the Freenote server and save it to
 local disk. Notes will be downloaded as markdown by default.`,
@@ -43,6 +43,7 @@ local disk. Notes will be downloaded as markdown by default.`,
 				fmt.Println("failed to open ", downloadFile, ": ", err)
 				os.Exit(1)
 			}
+			defer f.Close()
 		}
 		note := new(notes.Note)
 		c, err := initClient()

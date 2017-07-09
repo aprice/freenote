@@ -118,7 +118,7 @@ report: check
 	cat "$(RPTDIR)/test.out" | $(XUCMD) -output "$(RPTDIR)/tests.xml"
 	go list -f '{{join .Deps "\n"}}' "$(CMDPKG)/..." | sort | uniq | xargs -I {} sh -c "go list -f '{{if not .Standard}}{{.ImportPath}}{{end}}' {} | tee -a '$(RPTDIR)/deps.out'"
 gen:
-	echo "Version=\"$(VERSION)\";" > web/version.js
+	echo "Version=\"$(VERSION)\";" > "$(PKGDIR)/web/version.js"
 	$(GOGEN) $(PKG)
 build: gen $(CMDS)
 $(CMDS): setup-dirs dep

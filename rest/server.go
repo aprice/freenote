@@ -13,16 +13,15 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/crypto/acme/autocert"
-
+	"github.com/microcosm-cc/bluemonday"
 	uuid "github.com/satori/go.uuid"
+	"golang.org/x/crypto/acme/autocert"
 
 	"github.com/aprice/freenote"
 	"github.com/aprice/freenote/config"
 	"github.com/aprice/freenote/store"
 	"github.com/aprice/freenote/users"
 	"github.com/aprice/freenote/web"
-	"github.com/microcosm-cc/bluemonday"
 )
 
 // Server handles HTTP requests.

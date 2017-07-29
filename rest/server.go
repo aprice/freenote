@@ -114,10 +114,20 @@ func (s *Server) Stop() {
 
 // ServeHTTP fulfills http.Handler.
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if s.conf.ForceTLS && r.TLS == nil && r.Header.Get("X-Forwarded-Proto") != "https" {
+	// Prefer HTTPS but not HTTPS?
+	if s.conf.CanonicalHTTPS && r.TLS == nil && r.Header.Get("X-Forwarded-Proto") != "https" {
 		u := s.conf.BaseURI + r.URL.Path
-		http.Redirect(w, r, u, http.StatusFound)
-		return
+		// Upgrade-Insecure-Requests -> 307 + Vary
+		if r.Header.Get("Upgrade-Insecure-Requests") == "1" {
+			w.Header().Add("Vary", "Upgrade-Insecure-Requests")
+			http.Redirect(w, r, u, http.StatusTemporaryRedirect)
+			return
+		}
+		// ForceTLS -> 302
+		if s.conf.ForceTLS {
+			http.Redirect(w, r, u, http.StatusFound)
+			return
+		}
 	}
 
 	w.Header().Add("Vary", "Accept")

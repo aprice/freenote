@@ -80,35 +80,28 @@ func (s *MongoNoteStore) NoteByID(id uuid.UUID) (notes.Note, error) {
 	return result, mongoError(err)
 }
 
-// NotesByOwner retrieves a page of notes by owner ID. It returns the page of
-// notes and the total number of notes owned by the given user.
-func (s *MongoNoteStore) NotesByOwner(userID uuid.UUID, page page.Page) ([]notes.Note, int, error) {
+func (s *MongoNoteStore) QueryNotes(query NoteQuery) ([]notes.Note, int, error) {
 	result := []notes.Note{}
-	q := s.c.Find(bson.M{"owner": userID})
+	qry := bson.M{}
+	if query.Owner != uuid.Nil {
+		qry["owner"] = query.Owner
+	}
+	if query.Folder != "" {
+		qry["folder"] = query.Folder
+	}
+	if query.Tag != "" {
+		qry["tags"] = query.Tag
+	}
+	if query.Text != "" {
+		//TODO: Full text search
+	}
+	q := s.c.Find(qry)
 	total, err := q.Count()
 	if err != nil {
 		return nil, -1, err
 	}
 	//TODO: Allow controlled sort field & direction
-	err = q.Sort("-modified").Skip(page.Start).Limit(page.Length).All(&result)
-	if err == nil && len(result) == 0 {
-		err = ErrNotFound
-	}
-	return result, total, mongoError(err)
-}
-
-// NotesByFolder retrieves a page of notes with a given owner and folder. It
-// returns the page of notes and the total number of notes with the given owner
-// and folder.
-func (s *MongoNoteStore) NotesByFolder(userID uuid.UUID, folder string, page page.Page) ([]notes.Note, int, error) {
-	result := []notes.Note{}
-	q := s.c.Find(bson.M{"owner": userID, "folder": folder})
-	total, err := q.Count()
-	if err != nil {
-		return nil, -1, err
-	}
-	//TODO: Allow controlled sort field & direction
-	err = q.Sort("-modified").Skip(page.Start).Limit(page.Length).All(&result)
+	err = q.Sort("-modified").Skip(query.Page.Start).Limit(query.Page.Length).All(&result)
 	if err == nil && len(result) == 0 {
 		err = ErrNotFound
 	}
@@ -119,19 +112,6 @@ func (s *MongoNoteStore) NotesByFolder(userID uuid.UUID, folder string, page pag
 func (s *MongoNoteStore) FoldersByFolder(userID uuid.UUID, folder string) ([]string, error) {
 	result := []string{}
 	err := s.c.Find(bson.M{"owner": userID, "folder": folder}).Sort("folder").Distinct("folder", &result)
-	if err == nil && len(result) == 0 {
-		err = ErrNotFound
-	}
-	return result, mongoError(err)
-}
-
-// NotesByTag retrieves a page of notes with a given owner and tag. It returns
-// the page of notes and the total number of notes with the given owner and
-// folder.
-func (s *MongoNoteStore) NotesByTag(userID uuid.UUID, tag string, page page.Page) ([]notes.Note, error) {
-	result := []notes.Note{}
-	//TODO: Allow controlled sort field & direction
-	err := s.c.Find(bson.M{"owner": userID, "tags": tag}).Sort("-modified").Skip(page.Start).Limit(page.Length).All(&result)
 	if err == nil && len(result) == 0 {
 		err = ErrNotFound
 	}

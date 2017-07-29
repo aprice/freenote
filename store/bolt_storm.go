@@ -1,6 +1,7 @@
 package store
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/asdine/storm"
@@ -58,32 +59,46 @@ func (s *StormNoteStore) NoteByID(id uuid.UUID) (notes.Note, error) {
 	return result, stormError(err)
 }
 
-// NotesByOwner retrieves a page of notes by owner ID. It returns the page of
-// notes and the total number of notes owned by the given user.
-func (s *StormNoteStore) NotesByOwner(userID uuid.UUID, page page.Page) ([]notes.Note, int, error) {
+type tagMatcher string
+
+func (tm *tagMatcher) MatchField(v interface{}) (bool, error) {
+	tags, ok := v.([]string)
+	if !ok {
+		return false, errors.New("not a []string")
+	}
+	for _, tag := range tags {
+		if tag == string(*tm) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func (s *StormNoteStore) QueryNotes(query NoteQuery) ([]notes.Note, int, error) {
 	var result []notes.Note
-	qry := s.db.Select(q.Eq("Owner", userID))
+	var matchers []q.Matcher
+	if query.Owner != uuid.Nil {
+		matchers = append(matchers, q.Eq("Owner", query.Owner))
+	}
+	if query.Folder != "" {
+		matchers = append(matchers, q.Eq("Folder", query.Folder))
+	}
+	if query.Tag != "" {
+		tm := tagMatcher(query.Tag)
+		matchers = append(matchers, q.NewFieldMatcher("Tags", &tm))
+	}
+	if query.Text != "" {
+		//TODO: Full text search
+	}
+	qry := s.db.Select(matchers...)
+
 	total, err := qry.Count(new(notes.Note))
 	if err != nil {
 		return nil, -1, err
 	} else if total == 0 {
 		return make([]notes.Note, 0), 0, nil
 	}
-	err = applyPage(qry, page).Find(&result)
-	return result, total, stormError(err)
-}
-
-// NotesByFolder retrieves a page of notes with a given owner and folder. It
-// returns the page of notes and the total number of notes with the given owner
-// and folder.
-func (s *StormNoteStore) NotesByFolder(userID uuid.UUID, folder string, page page.Page) ([]notes.Note, int, error) {
-	var result []notes.Note
-	qry := s.db.Select(q.And(q.Eq("Owner", userID), q.Eq("Folder", folder)))
-	total, err := qry.Count(new(notes.Note))
-	if err != nil {
-		return nil, -1, err
-	}
-	err = applyPage(qry, page).Find(&result)
+	err = applyPage(qry, query.Page).Find(&result)
 	return result, total, stormError(err)
 }
 

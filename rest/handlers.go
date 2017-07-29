@@ -338,11 +338,12 @@ func (s *Server) doNotes(w http.ResponseWriter, r *http.Request) {
 			SortDescending: true,
 		}
 		pageReq.FromQueryString(r.URL, []string{"modified", "title", "created"})
-		if folderPath == "" {
-			list, total, err = db.NoteStore().NotesByOwner(owner.ID, pageReq)
-		} else {
-			list, total, err = db.NoteStore().NotesByFolder(owner.ID, folderPath, pageReq)
+		q := store.NoteQuery{
+			Owner:  owner.ID,
+			Page:   pageReq,
+			Folder: folderPath,
 		}
+		list, total, err = db.NoteStore().QueryNotes(q)
 		if handleError(w, err) {
 			return
 		}

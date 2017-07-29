@@ -14,6 +14,7 @@ type Config struct {
 	ForceTLS           bool
 	RecoveryMode       bool
 	CommonPasswordList string
+	CanonicalHTTPS     bool
 
 	LetsEncryptHosts []string
 	CertFile         string
@@ -57,6 +58,9 @@ func Configure(path string) (Config, error) {
 	}
 	if c.ForceTLS {
 		c.BaseURI = strings.Replace(c.BaseURI, "http://", "https://", 1)
+	}
+	if strings.HasPrefix(c.BaseURI, "https") {
+		c.CanonicalHTTPS = true
 	}
 	return *c, nil
 }

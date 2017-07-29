@@ -82,11 +82,13 @@ var App = {
 			this.noteManager.classList.remove("noteSelected");
 			this.noteTitle.innerHTML = "";
 			this.noteBody.innerHTML = "";
+			document.title = "freenote";
 			return;
 		}
 		this.noteManager.classList.add("noteSelected");
 		this.noteManager.classList.remove("noneSelected");
 		this.noteTitle.innerText = this.currentNote.title;
+		document.title = this.currentNote.title + " - freenote";
 		$1("#NoteID", this.noteManager).innerText = uuidToB64(this.currentNote.id);
 		if (this.mode == "html") {
 			$1("#SourceButton i.html-mode", this.noteManager).classList.add("selected");

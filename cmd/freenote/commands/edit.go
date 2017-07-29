@@ -85,7 +85,7 @@ freenote edit will download a note from the Freenote server for local editing.`,
 			}
 		}
 
-		command := exec.Command(editor, tmpFile)
+		command := exec.Command(editor, tmpFile) // nolint: gas
 		command.Stderr = os.Stderr
 		command.Stdout = os.Stdout
 		command.Stdin = os.Stdin

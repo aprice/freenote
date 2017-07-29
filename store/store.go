@@ -28,14 +28,20 @@ type Session interface {
 // NoteStore implementations handle access to the backing store for notes.
 type NoteStore interface {
 	NoteByID(id uuid.UUID) (notes.Note, error)
-	NotesByOwner(userID uuid.UUID, page page.Page) ([]notes.Note, int, error)
-	NotesByFolder(userID uuid.UUID, folder string, page page.Page) ([]notes.Note, int, error)
+	QueryNotes(query NoteQuery) ([]notes.Note, int, error)
 	//FoldersByFolder(userID uuid.UUID, folder string) ([]string, error)
-	//NotesByTag(userID uuid.UUID, tag string, page page.Page) ([]notes.Note, int, error)
 	//Tags(userID uuid.UUID) ([]string, error)
-	//Search(userID uuid.UUID, query string, page page.Page) ([]notes.Note, int, error)
 	SaveNote(note *notes.Note) error
 	DeleteNote(id uuid.UUID) error
+}
+
+// NoteQuery holds parameters for a Note store query.
+type NoteQuery struct {
+	Owner  uuid.UUID
+	Folder string
+	Tag    string
+	Text   string
+	Page   page.Page
 }
 
 // UserStore implementations handle access to the backing store for users.

@@ -140,7 +140,9 @@ a {
 }
 
 #NoteTitleHeading {
+	font-size: 1.35rem;
 	font-weight: 300;
+	margin: .5em 0;
 	flex: 0 0 1em;
 }
 
@@ -150,6 +152,7 @@ a {
 	max-width: calc(98vw - 1em);
 	min-height: 1em;
 	padding: .1em;
+	margin: 0;
 }
 
 #NoteBody {
@@ -162,6 +165,7 @@ a {
 
 #NoteBody.md-mode {
 	font-family: 'Source Code Pro', 'Lucida Console', 'Courier New', Courier, Monaco, monospace;
+	font-size: 0.9rem;
 }
 
 #NoteBody.html-mode {

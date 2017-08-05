@@ -49,3 +49,12 @@ func AuthenticateAdmin(password string) (User, error) {
 	}
 	return User{}, ErrAuthenticationFailed
 }
+
+// RecoveryUser returns the recovery user, if any, and true if it is active or
+// false otherwise.
+func RecoveryUser() (User, bool) {
+	if recoveryMode.expires.Before(time.Now()) {
+		return User{}, false
+	}
+	return recoveryMode.user, true
+}

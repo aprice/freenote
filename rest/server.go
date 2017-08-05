@@ -132,7 +132,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Add("Vary", "Accept")
 	if freenote.Version != "" {
-		w.Header().Add("X-Freenote-Version", freenote.Version+" (build "+freenote.Build+")")
+		w.Header().Add("X-Freenote-Version", freenote.Version+"-"+freenote.Build)
 	}
 
 	db, err := store.NewSession(s.conf)
@@ -143,6 +143,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		defer clo.Close()
 	}
 	r = r.WithContext(store.NewContext(r.Context(), db))
+
 	user, err := s.authenticate(w, r, db.UserStore())
 	switch err {
 	case errNoAuth, nil:
@@ -167,6 +168,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+
+	r = r.WithContext(context.WithValue(r.Context(), originalURLKey, r.URL.Path))
 	first := firstSegment(r.URL.Path)
 	switch first {
 	case "users":
@@ -286,4 +289,13 @@ func popSegment(r *http.Request) string {
 		r.URL.Path = "/"
 	}
 	return seg
+}
+
+type contextKey int
+
+var originalURLKey contextKey = 1
+
+func originalURL(r *http.Request) (string, bool) {
+	original, ok := r.Context().Value(originalURLKey).(string)
+	return original, ok
 }

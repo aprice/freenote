@@ -89,7 +89,9 @@ var App = {
 		this.noteManager.classList.remove("noneSelected");
 		this.noteTitle.innerText = this.currentNote.title;
 		document.title = this.currentNote.title + " - freenote";
-		$1("#NoteID", this.noteManager).innerText = uuidToB64(this.currentNote.id);
+		if (this.currentNote.id)
+			$1("#NoteID", this.noteManager).innerText = uuidToB64(this.currentNote.id);
+
 		if (this.mode == "html") {
 			$1("#SourceButton i.html-mode", this.noteManager).classList.add("selected");
 			$1("#SourceButton i.md-mode", this.noteManager).classList.remove("selected");

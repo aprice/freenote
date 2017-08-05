@@ -73,6 +73,12 @@ var userOwnedPat = regexp.MustCompile("/users/([^/]+).*")
 // General authz based on path & method with no object details, prevents 404 fishing
 func (s *Server) authorize(path string, user users.User) bool {
 	if pts := userOwnedPat.FindStringSubmatch(path); len(pts) > 1 {
+		if pts[1] == users.RecoveryAdminName {
+			return false
+		}
+		if ruser, ok := users.RecoveryUser(); ok && pts[1] == ruser.ID.String() {
+			return false
+		}
 		if pts[1] == user.Username {
 			return true
 		}

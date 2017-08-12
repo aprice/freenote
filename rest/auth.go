@@ -5,11 +5,13 @@ import (
 	"errors"
 	"net/http"
 	"regexp"
+	"strings"
 	"time"
 
 	uuid "github.com/satori/go.uuid"
 
 	"github.com/aprice/freenote/ids"
+	"github.com/aprice/freenote/notes"
 	"github.com/aprice/freenote/store"
 	"github.com/aprice/freenote/users"
 )
@@ -22,8 +24,9 @@ var errUnauthorized = errors.New("unauthorized request")
 const failedAuthDelay = 100 * time.Millisecond
 
 // Supported authentication: HTTP Basic, HTTP Bearer, Cookie
-func (s *Server) authenticate(w http.ResponseWriter, r *http.Request, us store.UserStore) (users.User, error) {
+func authenticate(w http.ResponseWriter, r *http.Request, us store.UserStore) (users.User, error) {
 	if uname, pass, ok := r.BasicAuth(); ok {
+		uname = strings.ToLower(uname)
 		if uname == users.RecoveryAdminName {
 			user, err := users.AuthenticateAdmin(pass)
 			if err != nil {
@@ -68,10 +71,11 @@ func (s *Server) authenticate(w http.ResponseWriter, r *http.Request, us store.U
 	return users.User{}, errNoAuth
 }
 
-var userOwnedPat = regexp.MustCompile("/users/([^/]+).*")
+// TODO: Do this without matching a regexp on every request
+var userOwnedPat = regexp.MustCompile(`/users/([^/]+).*`)
 
 // General authz based on path & method with no object details, prevents 404 fishing
-func (s *Server) authorize(path string, user users.User) bool {
+func authorize(path string, user users.User) bool {
 	if pts := userOwnedPat.FindStringSubmatch(path); len(pts) > 1 {
 		if pts[1] == users.RecoveryAdminName {
 			return false
@@ -97,6 +101,20 @@ func (s *Server) authorize(path string, user users.User) bool {
 		return false
 	}
 	return true
+}
+
+func authorizeUser(actor, subject users.User) bool {
+	return actor.ID == subject.ID || actor.Access >= users.LevelAdmin
+}
+
+func authorizeNote(actor users.User, note notes.Note) bool {
+	// TODO: Sharing
+	return actor.ID == note.Owner || actor.Access >= users.LevelAdmin
+}
+
+func authorizeNoteWrite(actor users.User, note notes.Note) bool {
+	// TODO: Sharing
+	return actor.ID == note.Owner
 }
 
 func parseSessionCookie(r *http.Request) (users.Session, error) {

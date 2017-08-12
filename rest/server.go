@@ -4,9 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"io"
 	"log"
-	"math/rand"
 	"net/http"
 	"regexp"
 	"strings"
@@ -14,10 +12,8 @@ import (
 	"time"
 
 	"github.com/microcosm-cc/bluemonday"
-	uuid "github.com/satori/go.uuid"
 	"golang.org/x/crypto/acme/autocert"
 
-	"github.com/aprice/freenote"
 	"github.com/aprice/freenote/config"
 	"github.com/aprice/freenote/store"
 	"github.com/aprice/freenote/users"
@@ -114,70 +110,24 @@ func (s *Server) Stop() {
 
 // ServeHTTP fulfills http.Handler.
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// Prefer HTTPS but not HTTPS?
-	if s.conf.CanonicalHTTPS && r.TLS == nil && r.Header.Get("X-Forwarded-Proto") != "https" {
-		u := s.conf.BaseURI + r.URL.Path
-		// Upgrade-Insecure-Requests -> 307 + Vary
-		if r.Header.Get("Upgrade-Insecure-Requests") == "1" {
-			w.Header().Add("Vary", "Upgrade-Insecure-Requests")
-			http.Redirect(w, r, u, http.StatusTemporaryRedirect)
-			return
+	if s.upgrade(w, r) {
+		return
+	}
+
+	path := strings.Trim(r.URL.Path, "/")
+	if idx := strings.Index(path, "/"); idx > 0 {
+		path = path[:idx]
+	}
+	switch path {
+	case "session", "users":
+		rh, err := NewRequestHandler(r, s.conf, s.sanitizer)
+		if err != nil {
+			if handleError(w, err) {
+				return
+			}
 		}
-		// ForceTLS -> 302
-		if s.conf.ForceTLS {
-			http.Redirect(w, r, u, http.StatusFound)
-			return
-		}
-	}
-
-	w.Header().Add("Vary", "Accept")
-	if freenote.Version != "" {
-		w.Header().Add("X-Freenote-Version", freenote.Version+"-"+freenote.Build)
-	}
-
-	db, err := store.NewSession(s.conf)
-	if handleError(w, err) {
-		return
-	}
-	if clo, ok := db.(io.Closer); ok {
-		defer clo.Close()
-	}
-	r = r.WithContext(store.NewContext(r.Context(), db))
-
-	user, err := s.authenticate(w, r, db.UserStore())
-	switch err {
-	case errNoAuth, nil:
-	case errAuthCookieInvalid:
-		http.Error(w, "Unauthorized: Invalid Session Cookie", http.StatusUnauthorized)
-		//statusResponse(w, http.StatusUnauthorized)
-		return
-	default:
-		handleError(w, err)
-		return
-	}
-	r = r.WithContext(users.NewContext(r.Context(), user))
-	if user.ID != uuid.Nil && rand.Float64() < 0.1 {
-		user.CleanSessions()
-		db.UserStore().SaveUser(&user)
-	}
-	if !s.authorize(r.URL.Path, user) {
-		if user.Access == users.LevelAnon {
-			statusResponse(w, http.StatusUnauthorized)
-		} else {
-			statusResponse(w, http.StatusForbidden)
-		}
-		return
-	}
-
-	r = r.WithContext(context.WithValue(r.Context(), originalURLKey, r.URL.Path))
-	first := firstSegment(r.URL.Path)
-	switch first {
-	case "users":
-		stripSegment(r)
-		s.doUsers(w, r)
-	case "session":
-		stripSegment(r)
-		s.doSession(w, r)
+		defer rh.close()
+		rh.handle(w, r)
 	case "debug":
 		doDebug(w, r)
 	default:
@@ -185,52 +135,23 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) preflight(w http.ResponseWriter, r *http.Request, body []byte, methods ...string) {
-	methList := strings.ToUpper(strings.Join(methods, ", "))
-	headers := w.Header()
-	reqHeader := r.Header.Get("Access-Control-Request-Headers")
-	if reqHeader == "" {
-		reqHeader = "*"
+func (s *Server) upgrade(w http.ResponseWriter, r *http.Request) bool {
+	// Prefer HTTPS but not HTTPS?
+	if s.conf.CanonicalHTTPS && r.TLS == nil && r.Header.Get("X-Forwarded-Proto") != "https" {
+		u := s.conf.BaseURI + r.URL.Path
+		// Upgrade-Insecure-Requests -> 307 + Vary
+		if r.Header.Get("Upgrade-Insecure-Requests") == "1" {
+			w.Header().Add("Vary", "Upgrade-Insecure-Requests")
+			http.Redirect(w, r, u, http.StatusTemporaryRedirect)
+			return true
+		}
+		// ForceTLS -> 302
+		if s.conf.ForceTLS {
+			http.Redirect(w, r, u, http.StatusFound)
+			return true
+		}
 	}
-	var origin string
-	if r.TLS == nil {
-		origin = fmt.Sprintf("http://%s:%d", r.Host, s.conf.Port)
-	} else {
-		origin = fmt.Sprintf("https://%s:%d", r.Host, s.conf.TLSPort)
-	}
-
-	headers.Add("Vary", "Origin")
-	headers.Add("Vary", "Access-Control-Request-Methods")
-	headers.Add("Vary", "Access-Control-Request-Headers")
-
-	headers.Set("Allow", methList)
-	headers.Set("Access-Control-Allow-Origin", origin)
-	headers.Set("Access-Control-Allow-Methods", methList)
-	headers.Set("Access-Control-Allow-Headers", reqHeader)
-	headers.Set("Access-Control-Allow-Credentials", "true")
-	headers.Set("Access-Control-Max-Age", "86400")
-
-	if len(body) == 0 {
-		w.WriteHeader(http.StatusNoContent)
-	} else {
-		w.WriteHeader(http.StatusOK)
-		w.Write(body)
-	}
-}
-
-func (s *Server) baseURI(r *http.Request) string {
-	if s.conf.ForceTLS {
-		return s.conf.BaseURI
-	}
-	u := strings.TrimPrefix(s.conf.BaseURI, "http")
-	u = strings.TrimPrefix(u, "s")
-	if p := r.Header.Get("X-Forwarded-Proto"); p != "" {
-		return p + u
-	}
-	if r.TLS == nil {
-		return "http" + u
-	}
-	return "https" + u
+	return false
 }
 
 func statusResponse(w http.ResponseWriter, statusCode int) {
@@ -268,34 +189,4 @@ func badRequest(w http.ResponseWriter, err error) bool {
 		return true
 	}
 	return false
-}
-
-func firstSegment(path string) string {
-	path = strings.Trim(path, "/")
-	if idx := strings.Index(path, "/"); idx > 0 {
-		return path[:idx]
-	}
-	return path
-}
-
-func stripSegment(r *http.Request) {
-	r.URL.Path = strings.TrimPrefix(r.URL.Path, "/"+firstSegment(r.URL.Path))
-}
-
-func popSegment(r *http.Request) string {
-	seg := firstSegment(r.URL.Path)
-	r.URL.Path = strings.TrimPrefix(r.URL.Path, "/"+seg)
-	if r.URL.Path == "" {
-		r.URL.Path = "/"
-	}
-	return seg
-}
-
-type contextKey int
-
-var originalURLKey contextKey = 1
-
-func originalURL(r *http.Request) (string, bool) {
-	original, ok := r.Context().Value(originalURLKey).(string)
-	return original, ok
 }

@@ -2,6 +2,7 @@ package users
 
 import (
 	"errors"
+	"regexp"
 	"time"
 
 	uuid "github.com/satori/go.uuid"
@@ -15,6 +16,9 @@ var ErrUsernameTooShort = errors.New("username too short")
 
 // ErrUsernameTooLong indicates a username failed validation for maximum length.
 var ErrUsernameTooLong = errors.New("username too long")
+
+// ErrUsernameInvalid indicates a username uses illegal characters or format.
+var ErrUsernameInvalid = errors.New("invalid username")
 
 // SessionLifetime is the duration that a user session will be valid.
 const SessionLifetime = 90 * 24 * time.Hour
@@ -143,13 +147,22 @@ func ParseAccessLevel(in string) AccessLevel {
 	}
 }
 
+const minUsernameLength = 3
+const maxUsernameLength = 24
+const usernameRegexp = `^[a-z][a-z0-9\-_]*$`
+
+var usernameMatcher = regexp.MustCompile(usernameRegexp)
+
 // ValidateUsername checks that a username meets requirements.
 func ValidateUsername(name string) error {
-	if len(name) < 3 {
+	if len(name) < minUsernameLength {
 		return ErrUsernameTooShort
 	}
-	if len(name) > 24 {
+	if len(name) > maxUsernameLength {
 		return ErrUsernameTooLong
+	}
+	if !usernameMatcher.Match([]byte(name)) {
+		return ErrUsernameInvalid
 	}
 	return nil
 }

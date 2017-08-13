@@ -20,6 +20,7 @@ import (
 type requestHandler struct {
 	conf      config.Config
 	sanitizer *bluemonday.Policy
+	baseURI   string
 	path      string
 	db        store.Session
 	user      users.User
@@ -32,9 +33,25 @@ func NewRequestHandler(r *http.Request, conf config.Config, sanitizer *bluemonda
 	if err != nil {
 		return nil, err
 	}
+
+	var baseURI string
+	if conf.ForceTLS {
+		baseURI = conf.BaseURI
+	}
+	u := strings.TrimPrefix(conf.BaseURI, "http")
+	u = strings.TrimPrefix(u, "s")
+	if p := r.Header.Get("X-Forwarded-Proto"); p != "" {
+		baseURI = p + u
+	}
+	if r.TLS == nil {
+		baseURI = "http" + u
+	}
+	baseURI = "https" + u
+
 	rh := &requestHandler{
 		conf:      conf,
 		sanitizer: sanitizer,
+		baseURI:   baseURI,
 		path:      r.URL.Path,
 		db:        db,
 	}
@@ -128,19 +145,4 @@ func (rh *requestHandler) popSegment() string {
 		rh.path = "/"
 	}
 	return seg
-}
-
-func (rh *requestHandler) baseURI(r *http.Request) string {
-	if rh.conf.ForceTLS {
-		return rh.conf.BaseURI
-	}
-	u := strings.TrimPrefix(rh.conf.BaseURI, "http")
-	u = strings.TrimPrefix(u, "s")
-	if p := r.Header.Get("X-Forwarded-Proto"); p != "" {
-		return p + u
-	}
-	if r.TLS == nil {
-		return "http" + u
-	}
-	return "https" + u
 }

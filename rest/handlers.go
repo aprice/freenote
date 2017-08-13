@@ -31,7 +31,7 @@ func (rh *requestHandler) doSession(w http.ResponseWriter, r *http.Request) {
 			statusResponse(w, http.StatusUnauthorized)
 			return
 		}
-		sendResponse(w, r, decorateUser(rh.user, true, true, rh.baseURI(r)), http.StatusOK)
+		sendResponse(w, r, decorateUser(rh.user, true, true, rh.baseURI), http.StatusOK)
 		return
 	case http.MethodPost:
 		var user users.User
@@ -60,7 +60,7 @@ func (rh *requestHandler) doSession(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		writeSessionCookie(w, sess)
-		sendResponse(w, r, decorateUser(user, true, true, rh.baseURI(r)), http.StatusOK)
+		sendResponse(w, r, decorateUser(user, true, true, rh.baseURI), http.StatusOK)
 	case http.MethodDelete:
 		if rh.user.Access == users.LevelAnon {
 			handleError(w, errNoAuth)
@@ -131,7 +131,7 @@ func (rh *requestHandler) doUsers(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		pageReq.HasMore = total > (pageReq.Start + pageReq.Length)
-		sendResponse(w, r, decorateUsers(pageRes, pageReq, rh.user.Access >= users.LevelAdmin, rh.baseURI(r)), http.StatusOK)
+		sendResponse(w, r, decorateUsers(pageRes, pageReq, rh.user.Access >= users.LevelAdmin, rh.baseURI), http.StatusOK)
 	case http.MethodPost:
 		//TODO: User creation controls
 		//TODO: New user verification
@@ -167,10 +167,10 @@ func (rh *requestHandler) doUsers(w http.ResponseWriter, r *http.Request) {
 			decoratedUser
 			Password string
 		}{
-			decorateUser(newUser, true, true, rh.baseURI(r)),
+			decorateUser(newUser, true, true, rh.baseURI),
 			pw,
 		}
-		w.Header().Add("Location", fmt.Sprintf("%s/users/%s", rh.baseURI(r), newUser.ID))
+		w.Header().Add("Location", fmt.Sprintf("%s/users/%s", rh.baseURI, newUser.ID))
 		sendResponse(w, r, pl, http.StatusCreated)
 		return
 	default:
@@ -216,7 +216,7 @@ func (rh *requestHandler) doUser(w http.ResponseWriter, r *http.Request) {
 		return
 	case http.MethodGet:
 		self := owner.ID == rh.user.ID
-		sendResponse(w, r, decorateUser(owner, self, self, rh.baseURI(r)), http.StatusOK)
+		sendResponse(w, r, decorateUser(owner, self, self, rh.baseURI), http.StatusOK)
 	case http.MethodPut:
 		//TODO: Conflict checking (etag, modified, etc)
 		updateUser := new(users.User)
@@ -239,8 +239,8 @@ func (rh *requestHandler) doUser(w http.ResponseWriter, r *http.Request) {
 		if err = rh.db.UserStore().SaveUser(updateUser); handleError(w, err) {
 			return
 		}
-		w.Header().Add("Location", fmt.Sprintf("%s/users/%s", rh.baseURI(r), updateUser.ID))
-		sendResponse(w, r, decorateUser(*updateUser, true, true, rh.baseURI(r)), http.StatusOK)
+		w.Header().Add("Location", fmt.Sprintf("%s/users/%s", rh.baseURI, updateUser.ID))
+		sendResponse(w, r, decorateUser(*updateUser, true, true, rh.baseURI), http.StatusOK)
 		return
 	case http.MethodDelete:
 		//TODO: Delete user & all notes
@@ -336,7 +336,7 @@ func (rh *requestHandler) doNotes(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		pageReq.HasMore = total > (pageReq.Start + pageReq.Length)
-		sendResponse(w, r, decorateNotes(rh.owner, list, folderPath, pageReq, authorizeUser(rh.user, rh.owner), rh.baseURI(r)), http.StatusOK)
+		sendResponse(w, r, decorateNotes(rh.owner, list, folderPath, pageReq, authorizeUser(rh.user, rh.owner), rh.baseURI), http.StatusOK)
 	case http.MethodPost:
 		note := new(notes.Note)
 		var err error
@@ -360,8 +360,8 @@ func (rh *requestHandler) doNotes(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		ensureHTMLBody(note, rh.sanitizer)
-		w.Header().Add("Location", fmt.Sprintf("%s/users/%s/notes/%s", rh.baseURI(r), rh.owner.ID, note.ID))
-		sendResponse(w, r, decorateNote(*note, true, rh.baseURI(r)), http.StatusCreated)
+		w.Header().Add("Location", fmt.Sprintf("%s/users/%s/notes/%s", rh.baseURI, rh.owner.ID, note.ID))
+		sendResponse(w, r, decorateNote(*note, true, rh.baseURI), http.StatusCreated)
 	default:
 		w.Header().Add("Allow", "GET, POST")
 		statusResponse(w, http.StatusMethodNotAllowed)
@@ -399,7 +399,7 @@ func (rh *requestHandler) doNote(w http.ResponseWriter, r *http.Request) {
 		}
 		ensureHTMLBody(&note, rh.sanitizer)
 		//TODO: text/markdown, text/plain Accept support & front matter addition
-		sendResponse(w, r, decorateNote(note, authorizeNoteWrite(rh.user, note), rh.baseURI(r)), http.StatusOK)
+		sendResponse(w, r, decorateNote(note, authorizeNoteWrite(rh.user, note), rh.baseURI), http.StatusOK)
 	case http.MethodPut:
 		//TODO: Conflict checking (etag, modified, etc)
 		//TODO: Sharing
@@ -423,7 +423,7 @@ func (rh *requestHandler) doNote(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		ensureHTMLBody(note, rh.sanitizer)
-		sendResponse(w, r, decorateNote(*note, authorizeNoteWrite(rh.user, *note), rh.baseURI(r)), http.StatusOK)
+		sendResponse(w, r, decorateNote(*note, authorizeNoteWrite(rh.user, *note), rh.baseURI), http.StatusOK)
 		return
 	case http.MethodDelete:
 		if !authorizeNote(rh.user, note) {

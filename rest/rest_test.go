@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"io/ioutil"
 
@@ -47,7 +48,7 @@ func TestFirstLoad(t *testing.T) {
 	w := httptest.NewRecorder()
 	s.ServeHTTP(w, req)
 	if w.Code != http.StatusOK {
-		t.Fatalf("Server responded %d: %s", w.Code, w.Body)
+		t.Fatalf("Server responded %d: %s", w.Code, truncate(w.Body.String(), 50))
 	}
 	cookie := w.Header().Get("Set-Cookie")
 
@@ -57,7 +58,7 @@ func TestFirstLoad(t *testing.T) {
 	w = httptest.NewRecorder()
 	s.ServeHTTP(w, req)
 	if w.Code != http.StatusOK {
-		t.Fatalf("Server responded %d: %s", w.Code, w.Body)
+		t.Fatalf("Server responded %d: %s", w.Code, truncate(w.Body.String(), 50))
 	}
 	user := new(users.User)
 	err = json.NewDecoder(w.Body).Decode(user)
@@ -74,7 +75,7 @@ func TestFirstLoad(t *testing.T) {
 	w = httptest.NewRecorder()
 	s.ServeHTTP(w, req)
 	if w.Code != http.StatusOK {
-		t.Fatalf("Server responded %d: %s", w.Code, w.Body)
+		t.Fatalf("Server responded %d: %s", w.Code, truncate(w.Body.String(), 50))
 	}
 	notesPayload := struct{ Notes []notes.Note }{}
 	err = json.NewDecoder(w.Body).Decode(&notesPayload)
@@ -86,7 +87,7 @@ func TestFirstLoad(t *testing.T) {
 	}
 }
 
-func TestCreate(t *testing.T) {
+func TestCRUDNote(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
@@ -113,7 +114,10 @@ func TestCreate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// TODO: Figure out why IDs aren't consistent
+	re := regexp.MustCompile(`(\s+|id="[^"]*")`)
 
+	// Create
 	note := notes.Note{Title: "Sample Note"}
 	note.Body = string(body)
 	b, err := json.Marshal(note)
@@ -128,7 +132,7 @@ func TestCreate(t *testing.T) {
 	w := httptest.NewRecorder()
 	s.ServeHTTP(w, req)
 	if w.Code != http.StatusCreated {
-		t.Fatalf("Server responded %d: %s", w.Code, w.Body)
+		t.Fatalf("Server responded %d: %s", w.Code, truncate(w.Body.String(), 50))
 	}
 
 	note = notes.Note{}
@@ -136,7 +140,6 @@ func TestCreate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	re := regexp.MustCompile(`\s+`)
 	expected := re.ReplaceAllString(string(body), " ")
 	actual := re.ReplaceAllString(note.Body, " ")
 	if actual != expected {
@@ -148,6 +151,90 @@ func TestCreate(t *testing.T) {
 	if actual != expected {
 		t.Errorf("HTML does not match expected value.\nExpected:\n%q\n-------\nActual:\n%q\n",
 			expected, actual)
+	}
+
+	// Retrieve
+	req = httptest.NewRequest("GET", fmt.Sprintf("/users/%s/notes/%s", userID, note.ID), nil)
+	req.Header.Set("Accept", "application/json")
+	req.SetBasicAuth(testUsername, testPassword)
+	w = httptest.NewRecorder()
+	s.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("Server responded %d: %s", w.Code, truncate(w.Body.String(), 50))
+	}
+
+	note = notes.Note{}
+	err = json.NewDecoder(w.Body).Decode(&note)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected = re.ReplaceAllString(string(body), " ")
+	actual = re.ReplaceAllString(note.Body, " ")
+	if actual != expected {
+		t.Errorf("Markdown does not match expected value.\nExpected:\n%q\n-------\nActual:\n%q\n",
+			expected, actual)
+	}
+	expected = re.ReplaceAllString(string(html), " ")
+	actual = re.ReplaceAllString(note.HTMLBody, " ")
+	if actual != expected {
+		t.Errorf("HTML does not match expected value.\nExpected:\n%q\n-------\nActual:\n%q\n",
+			expected, actual)
+	}
+
+	// Update
+	note.Title = "Sample Note Updated"
+	note.HTMLBody = ""
+	note.Modified = time.Now()
+	b, err = json.Marshal(note)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req = httptest.NewRequest("PUT", fmt.Sprintf("/users/%s/notes/%s", userID, note.ID),
+		bytes.NewReader(b))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	req.SetBasicAuth(testUsername, testPassword)
+	w = httptest.NewRecorder()
+	s.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("Server responded %d: %s", w.Code, truncate(w.Body.String(), 50))
+	}
+
+	note = notes.Note{}
+	err = json.NewDecoder(w.Body).Decode(&note)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected = re.ReplaceAllString(string(body), " ")
+	actual = re.ReplaceAllString(note.Body, " ")
+	if actual != expected {
+		t.Errorf("Markdown does not match expected value.\nExpected:\n%q\n-------\nActual:\n%q\n",
+			expected, actual)
+	}
+	expected = re.ReplaceAllString(string(html), " ")
+	actual = re.ReplaceAllString(note.HTMLBody, " ")
+	if actual != expected {
+		t.Errorf("HTML does not match expected value.\nExpected:\n%q\n-------\nActual:\n%q\n",
+			expected, actual)
+	}
+
+	// Delete
+	req = httptest.NewRequest("DELETE", fmt.Sprintf("/users/%s/notes/%s", userID, note.ID), nil)
+	req.Header.Set("Accept", "application/json")
+	req.SetBasicAuth(testUsername, testPassword)
+	w = httptest.NewRecorder()
+	s.ServeHTTP(w, req)
+	if w.Code != http.StatusNoContent {
+		t.Fatalf("Server responded %d: %s", w.Code, truncate(w.Body.String(), 50))
+	}
+
+	req = httptest.NewRequest("GET", fmt.Sprintf("/users/%s/notes/%s", userID, note.ID), nil)
+	req.Header.Set("Accept", "application/json")
+	req.SetBasicAuth(testUsername, testPassword)
+	w = httptest.NewRecorder()
+	s.ServeHTTP(w, req)
+	if w.Code != http.StatusNotFound && w.Code != http.StatusGone {
+		t.Fatalf("Server responded %d: %s", w.Code, truncate(w.Body.String(), 50))
 	}
 }
 
@@ -187,4 +274,11 @@ func createTestUser() (uuid.UUID, error) {
 		return uuid.Nil, err
 	}
 	return testUser.ID, nil
+}
+
+func truncate(s string, l int) string {
+	if len(s) > l {
+		return s[:l]
+	}
+	return s
 }

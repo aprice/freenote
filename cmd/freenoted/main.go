@@ -9,7 +9,7 @@ import (
 	flag "github.com/spf13/pflag"
 
 	"github.com/aprice/freenote/config"
-	"github.com/aprice/freenote/rest"
+	"github.com/aprice/freenote/server"
 	"github.com/aprice/freenote/stats"
 	"github.com/aprice/freenote/users"
 )
@@ -42,7 +42,7 @@ func main() {
 		log.Printf("Recovery user: %q password: %q good until %s", users.RecoveryAdminName, pw, time.Now().Add(users.RecoveryPeriod))
 	}
 
-	restServer, err := rest.NewServer(conf)
+	restServer, err := server.New(conf)
 	if err != nil {
 		log.Fatal(err)
 	}

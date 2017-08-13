@@ -1,6 +1,6 @@
 //+build dev debug
 
-package rest
+package server
 
 import (
 	"expvar"

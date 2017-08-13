@@ -1,4 +1,4 @@
-package rest
+package server
 
 import (
 	"bytes"
@@ -243,7 +243,7 @@ func setupTest() (userID uuid.UUID, server *Server, err error) {
 	if err != nil {
 		return
 	}
-	server, err = NewServer(testConfig)
+	server, err = New(testConfig)
 	return
 }
 

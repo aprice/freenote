@@ -56,7 +56,7 @@ local disk. Notes will be downloaded as markdown by default.`,
 			}
 			for _, note := range payload.Notes {
 				wg.Add(1)
-				go func(n notes.Note) {
+				go func(n rest.DecoratedNote) {
 					downloadFile := filepath.Join(path, n.ID.String()+ext)
 					f, err := os.OpenFile(downloadFile, os.O_CREATE, 0600)
 					if err != nil {
@@ -65,7 +65,7 @@ local disk. Notes will be downloaded as markdown by default.`,
 					}
 					defer f.Close()
 					note := new(notes.Note)
-					err = c.Get(fmt.Sprintf("/users/%s/notes/%s", ownerID, n.ID), note)
+					err = c.Get(n.Links["canonical"].Href, note)
 					if err != nil {
 						fmt.Println("get note failed: ", err)
 						os.Exit(1)

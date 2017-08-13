@@ -26,13 +26,14 @@ func DecorateNote(note notes.Note, canWrite bool, baseURI string) DecoratedNote 
 }
 
 type DecoratedNotes struct {
-	Links   Links        `json:"_links" xml:"Links>Link"`
-	Notes   []notes.Note `json:"notes" xml:"Page>Note"`
-	XMLName struct{}     `json:"-" xml:"Notes"`
+	Links   Links           `json:"_links" xml:"Links>Link"`
+	Notes   []DecoratedNote `json:"notes" xml:"Page>Note"`
+	XMLName struct{}        `json:"-" xml:"Notes"`
 }
 
 func DecorateNotes(owner users.User, values []notes.Note, folder string, page page.Page, canWrite bool, baseURI string) DecoratedNotes {
 	links := Links{}
+	decorated := make([]DecoratedNote, len(values), len(values))
 	var base string
 	if folder == "" {
 		base = fmt.Sprintf("%s/users/%s/notes", baseURI, owner.ID)
@@ -44,7 +45,8 @@ func DecorateNotes(owner users.User, values []notes.Note, folder string, page pa
 		if idx > 0 {
 			values[i].Body = values[i].Body[:idx]
 		}
+		decorated[i] = DecorateNote(values[i], canWrite, baseURI)
 	}
 	links.CollectionCR(base, page, canWrite)
-	return DecoratedNotes{Notes: values, Links: links}
+	return DecoratedNotes{Notes: decorated, Links: links}
 }

@@ -23,6 +23,13 @@ func DecorateUser(user users.User, canReadNotes, canWrite bool, baseURI string) 
 			Href:   fmt.Sprintf("%s/users/%s/notes", baseURI, user.ID),
 		})
 	}
+	if canWrite {
+		links.Add(Link{
+			Rel:    "password",
+			Method: "PUT",
+			Href:   fmt.Sprintf("%s/users/%s/password", baseURI, user.ID),
+		})
+	}
 	user.Password = nil
 	user.Sessions = nil
 	return DecoratedUser{User: user, Links: links}

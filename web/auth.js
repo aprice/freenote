@@ -53,8 +53,8 @@ function SaveUser() {
 		return
 	}
 	App.rest({
-		method: "PUT",
-		url: "/users/" + App.user.id + "/password",
+		method: App.user._links.password.method,
+		url: App.user._links.password.href,
 		ctype: "text/plain",
 		body: pw,
 		success: function (payload) {

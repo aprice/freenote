@@ -55,8 +55,7 @@ function SelectNote(note) {
 			return;
 		}
 		App.rest({
-			//TODO: Use canonical link href from hypderdata (not currently being sent)
-			url: "/users/" + App.user.id + "/notes/" + note.id,
+			url: note._links.canonical.href,
 			success: function(payload) {
 				App.currentNote = payload;
 				App.currentNote.index = note.index;

@@ -37,17 +37,17 @@ func NewRequestHandler(r *http.Request, conf config.Config, sanitizer *bluemonda
 	var baseURI string
 	if conf.ForceTLS {
 		baseURI = conf.BaseURI
+	} else {
+		u := strings.TrimPrefix(conf.BaseURI, "http")
+		u = strings.TrimPrefix(u, "s")
+		if p := r.Header.Get("X-Forwarded-Proto"); p != "" {
+			baseURI = p + u
+		} else if r.TLS != nil {
+			baseURI = "https" + u
+		} else {
+			baseURI = "http" + u
+		}
 	}
-	u := strings.TrimPrefix(conf.BaseURI, "http")
-	u = strings.TrimPrefix(u, "s")
-	if p := r.Header.Get("X-Forwarded-Proto"); p != "" {
-		baseURI = p + u
-	}
-	if r.TLS == nil {
-		baseURI = "http" + u
-	}
-	baseURI = "https" + u
-
 	rh := &requestHandler{
 		conf:      conf,
 		sanitizer: sanitizer,

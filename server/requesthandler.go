@@ -12,7 +12,6 @@ import (
 
 	"github.com/aprice/freenote"
 	"github.com/aprice/freenote/config"
-	"github.com/aprice/freenote/notes"
 	"github.com/aprice/freenote/store"
 	"github.com/aprice/freenote/users"
 )
@@ -25,10 +24,9 @@ type requestHandler struct {
 	db        store.Session
 	user      users.User
 	owner     users.User
-	note      notes.Note
 }
 
-func NewRequestHandler(r *http.Request, conf config.Config, sanitizer *bluemonday.Policy) (*requestHandler, error) {
+func newRequestHandler(r *http.Request, conf config.Config, sanitizer *bluemonday.Policy) (*requestHandler, error) {
 	db, err := store.NewSession(conf)
 	if err != nil {
 		return nil, err

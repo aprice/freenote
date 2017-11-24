@@ -127,7 +127,7 @@ a {
 	display: block;
 }
 
-#NotePane {
+#NoteEditor {
 	flex: 2 1 50em;
 	padding-bottom: 1em;
 	border-left: .16em solid #999;
@@ -144,6 +144,10 @@ a {
 	font-weight: 300;
 	margin: .5em 0;
 	flex: 0 0 1em;
+}
+
+#BackButton {
+	display: none;
 }
 
 #NoteTitle {

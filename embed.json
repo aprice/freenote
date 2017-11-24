@@ -5,5 +5,5 @@
 	"PackageName": "web",
 	"DevOutputPath": "web/embedded_dev.go",
 	"DevBuildConstraints": "dev",
-	"ExcludePattern": "(^\\.|\\.go$)"
+	"ExcludePattern": "(/\\.|^\\.|\\.go$)"
 }

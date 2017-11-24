@@ -74,6 +74,9 @@ func (tm *tagMatcher) MatchField(v interface{}) (bool, error) {
 	return false, nil
 }
 
+// QueryNotes queries the collection of notes with the parameters given in query,
+// and returns the requested page of notes, the total notes matching the query
+// (ignoring pagination), and any error encountered.
 func (s *StormNoteStore) QueryNotes(query NoteQuery) ([]notes.Note, int, error) {
 	var result []notes.Note
 	var matchers []q.Matcher
@@ -86,6 +89,9 @@ func (s *StormNoteStore) QueryNotes(query NoteQuery) ([]notes.Note, int, error) 
 	if query.Tag != "" {
 		tm := tagMatcher(query.Tag)
 		matchers = append(matchers, q.NewFieldMatcher("Tags", &tm))
+	}
+	if query.ModifiedSince.After(epoch) {
+		matchers = append(matchers, q.Gt("Modified", query.ModifiedSince))
 	}
 	if query.Text != "" {
 		//TODO: Full text search

@@ -56,10 +56,7 @@ func readCommonPasswords(r io.Reader) error {
 			commonPasswords.Add(pw)
 		}
 	}
-	if err := scanner.Err(); err != nil {
-		return err
-	}
-	return nil
+	return scanner.Err()
 }
 
 // ValidatePassword against the password rules.

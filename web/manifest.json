@@ -1,0 +1,36 @@
+{
+	"name": "freenote",
+	"short_name": "freenote",
+	"start_url": ".",
+	"display": "standalone",
+	"background_color": "#eee",
+	"theme_color": "#999",
+	"description": "A free, open-source note keeper",
+	"icons": [
+		{
+			"src": "freenote32.png",
+			"sizes": "32x32",
+			"type": "image/png"
+		},
+		{
+			"src": "freenote64.png",
+			"sizes": "64x64",
+			"type": "image/png"
+		},
+		{
+			"src": "freenote128.png",
+			"sizes": "128x128",
+			"type": "image/png"
+		},
+		{
+			"src": "freenote256.png",
+			"sizes": "256x256",
+			"type": "image/png"
+		},
+		{
+			"src": "freenote512.png",
+			"sizes": "512x512",
+			"type": "image/png"
+		}
+	]
+}

@@ -13,12 +13,12 @@ import (
 )
 
 var (
-	backupHtml bool
+	backupHTML bool
 	backupDir  string
 )
 
 func init() {
-	backupCmd.Flags().BoolVar(&backupHtml, "html", false, "download HTML instead of markdown")
+	backupCmd.Flags().BoolVar(&backupHTML, "html", false, "download HTML instead of markdown")
 	backupCmd.Flags().StringVarP(&backupDir, "dir", "d", ".", "directory to write to")
 	rootCmd.AddCommand(backupCmd)
 }
@@ -34,7 +34,7 @@ local disk. Notes will be downloaded as markdown by default.`,
 		var err error
 		path := filepath.Clean(backupDir)
 		ext := ".md"
-		if backupHtml {
+		if backupHTML {
 			ext = ".html"
 		}
 
@@ -71,7 +71,7 @@ local disk. Notes will be downloaded as markdown by default.`,
 						os.Exit(1)
 					}
 					var body string
-					if htmlExport {
+					if backupHTML {
 						body = note.HTMLBody
 					} else {
 						body = note.Body

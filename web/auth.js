@@ -1,85 +1,129 @@
-function Login() {
-	var user = $id("UsernameField").value;
-	var pass = $id("PasswordField").value;
-	App.rest({
-		method: "POST",
-		url: "/session",
-		body: "username=" + encodeURIComponent(user) + "&password=" + encodeURIComponent(pass),
-		ctype: "application/x-www-form-urlencoded",
-		success: function (payload) {
-			App.user = payload;
-			App.userRefresh();
-			LoadNotes();
+'use strict';
+
+var User = {
+	user: null,
+	userPanel: null,
+	loginPanel: null,
+	editModal: null,
+
+	init: function () {
+		if (this.user == null && window.localStorage.getItem("user")) {
+			this.user = JSON.parse(window.localStorage.getItem("user"));
 		}
-	});
-}
 
-function Logout() {
-	App.rest({
-		method: "DELETE",
-		url: "/session",
-		success: function (payload) {
-			App.user = null;
-			App.notes = null;
-			App.currentNote = null;
-			App.prevPage = null;
-			App.nextPage = null;
-			App.curPage = null;
-			App.createLink = null;
-			App.mode = "md";
-			window.clearInterval(App.refreshInterval);
-			window.clearInterval(App.saveInterval);
-			App.noteRefresh();
-			App.noteListRefresh();
-			App.userRefresh();
-		}
-	});
-}
+		this.userPanel = $id("User");
+		this.loginPanel = $id("Login");
+		this.editModal = $id("EditUserModal");
 
-function EditUser() {
-	$id("ConfirmPasswordField").setCustomValidity("");
-	$id("EditUserModal").style.display = "block";
-}
+		var self = this;
+		$1(".confirmButton", this.loginPanel).addEventListener("click", function(evt) {
+			self.login();
+		});
+		$id("Logout").addEventListener("click", function(evt) {
+			self.logout();
+		});
+		$id("EditUser").addEventListener("click", function(evt) {
+			self.editUser();
+		});
+		$1(".confirmButton", this.editModal).addEventListener("click", function(evt) {
+			self.editUser();
+		});
+		$1(".cancelButton", this.editModal).addEventListener("click", function(evt) {
+			self.dismissUserModal();
+		});
 
-function DismissUserModal() {
-	$id("EditUserModal").style.display = "none";
-}
-
-function SaveUser() {
-	var pw = $id("NewPasswordField").value;
-	var conf = $id("ConfirmPasswordField").value;
-	if (pw != conf) {
-		$id("ConfirmPasswordField").setCustomValidity("Confirm password must match password.");
-		return
-	}
-	App.rest({
-		method: App.user._links.password.method,
-		url: App.user._links.password.href,
-		ctype: "text/plain",
-		body: pw,
-		success: function (payload) {
-			App.message("Password updated.");
-		}
-	});
-	DismissUserModal();
-}
-
-window.addEventListener("load", function() {
-	App.rest({
-		url: "/session",
-		success: function (payload) {
-			App.user = payload;
-			App.userRefresh();
-			LoadNotes();
-		},
-		failed: function (status) {
-			if (status == 401) {
+		restRequest({
+			url: "/session",
+		}).then(function (payload) {
+			self.user = payload;
+			self.refresh();
+			NoteList.loadNotes();
+		}).catch(function (error) {
+			App.log(error);
+			if (error.status == 401) {
 				App.log("Not logged in");
-				App.user = null;
-				App.userRefresh();
+				self.user = null;
+				self.refresh();
 			} else {
-				App.error("Authentication failed: " + r.responseText);
+				var msg = error.responseText || error.statusText;
+				App.error("Authentication failed: " + msg);
 			}
+		});
+	},
+
+	loggedIn: function() {
+		return this.user != null;
+	},
+
+	refresh: function () {
+		if (this.user == null) {
+			window.localStorage.removeItem("user");
+			hide(this.userPanel);
+			show(this.loginPanel);
+		} else {
+			window.localStorage.setItem("user", JSON.stringify(this.user));
+			$id("WhoAmI").innerText = this.user.username;
+			hide(this.loginPanel);
+			show(this.userPanel);
 		}
-	});
-});
+	},
+
+	login: function() {
+		var user = $id("UsernameField").value;
+		var pass = $id("PasswordField").value;
+		$id("UsernameField").value = "";
+		$id("PasswordField").value = "";
+		var self = this;
+		restRequest({
+			method: "POST",
+			url: "/session",
+			body: "username=" + encodeURIComponent(user) + "&password=" + encodeURIComponent(pass),
+			ctype: "application/x-www-form-urlencoded",
+		}).then(function(payload) {
+			self.user = payload;
+			self.refresh();
+			NoteList.loadNotes();
+		});
+	},
+
+	logout: function() {
+		var self = this;
+		restRequest({method: "DELETE", url: "/session"}).then(function(payload) {
+			self.user = null;
+			DataStore.delete();
+			NoteList.notes = null;
+			NoteEditor.currentNote = null;
+			NoteEditor.mode = "md";
+			NoteEditor.refresh();
+			NoteList.refresh();
+			self.refresh();
+		});
+	},
+
+	editUser: function() {
+		$id("ConfirmPasswordField").setCustomValidity("");
+		show(this.editModal);
+	},
+
+	dismissUserModal: function() {
+		hide(this.editModal);
+	},
+
+	saveUser: function() {
+		var pw = $id("NewPasswordField").value;
+		var conf = $id("ConfirmPasswordField").value;
+		if (pw != conf) {
+			$id("ConfirmPasswordField").setCustomValidity("Confirm password must match password.");
+			return;
+		}
+		restRequest({
+			method: this.user._links.password.method,
+			url: this.user._links.password.href,
+			ctype: "text/plain",
+			body: pw,
+		}).then(function(payload) {
+			App.message("Password updated.");
+		});
+		this.dismissUserModal();
+	},
+};

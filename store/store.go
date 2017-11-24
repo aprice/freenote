@@ -2,6 +2,7 @@ package store
 
 import (
 	"errors"
+	"time"
 
 	uuid "github.com/satori/go.uuid"
 
@@ -36,11 +37,12 @@ type NoteStore interface {
 
 // NoteQuery holds parameters for a Note store query.
 type NoteQuery struct {
-	Owner  uuid.UUID
-	Folder string
-	Tag    string
-	Text   string
-	Page   page.Page
+	Owner         uuid.UUID
+	Folder        string
+	Tag           string
+	Text          string
+	Page          page.Page
+	ModifiedSince time.Time
 }
 
 // UserStore implementations handle access to the backing store for users.
@@ -62,3 +64,5 @@ func NewSession(conf config.Config) (Session, error) {
 	}
 	return nil, errors.New("No backing store confiured")
 }
+
+var epoch = time.Time{}

@@ -48,7 +48,7 @@ func main() {
 	}
 	restServer.Start()
 
-	stop := make(chan os.Signal)
+	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 	<-stop
 

@@ -2,17 +2,32 @@
 <html>
 	<head>
 		<title>freenote</title>
-		<link href="https://fonts.googleapis.com/css?family=Lato:400,300,300italic,400italic,700,700italic|Work+Sans:400,300,200,700|Source+Code+Pro:400" rel="stylesheet" type="text/css" />
-		<link href="theme.css" rel="stylesheet" type="text/css" media="screen" />
-		<link href="small-screen.css" rel="stylesheet" type="text/css"/>
-		<!--link href="small-screen.css" rel="stylesheet" type="text/css" media="screen and (max-height: 300ex, max-width 100em)"/-->
-		<link href="font-awesome.min.css" rel="stylesheet" type="text/css" />
-		<meta name="viewport" content="width=device-width, initial-scale=1">
+
+		<link href="manifest.json" rel="manifest"/>
+
+		<meta name="viewport" content="width=device-width, initial-scale=1"/>
+		<link href="https://fonts.googleapis.com/css?family=Lato:400,300,300italic,400italic,700,700italic|Work+Sans:400,300,200,700|Source+Code+Pro:400" rel="stylesheet" type="text/css"/>
+		<link href="theme.css" rel="stylesheet" type="text/css" media="screen"/>
+		<!--link href="small-screen.css" rel="stylesheet" type="text/css"/-->
+		<link href="small-screen.css" rel="stylesheet" type="text/css" media="screen and (max-height: 50em), screen and (max-width: 40em)"/>
+		<link href="font-awesome.min.css" rel="stylesheet" type="text/css"/>
+
 		<script src="version.js" type="application/javascript"></script>
 		<script src="utils.js" type="application/javascript"></script>
 		<script src="app.js" type="application/javascript"></script>
+		<script src="db.js" type="application/javascript"></script>
 		<script src="auth.js" type="application/javascript"></script>
 		<script src="notes.js" type="application/javascript"></script>
+
+		<link href="freenote256.png" rel="apple-touch-icon" type="image/png"/>
+		<link href="freenote256.png" rel="icon" type="image/png"/>
+		<meta name="description" value="A free, open-source note keeper"/>
+		<meta name="theme-color" content="#999"/>
+		<meta name="apple-mobile-web-app-capable" content="yes"/>
+		<meta name="apple-mobile-web-app-status-bar-style" content="black"/>
+		<meta name="apple-mobile-web-app-title" content="freenote"/>
+		<meta name="msapplication-TileImage" content="freenote256.png">
+		<meta name="msapplication-TileColor" content="#2F3BA2">
 	</head>
 	<body>
 		<h1 id="SiteTitle">freenote</h1>
@@ -20,62 +35,59 @@
 		<section id="Confirmation" style="display:none">
 			<p class="message"></p>
 			<p>
-				<a class="confirmButton toolButton" onclick="Confirmed()"><i class="fa fa-fw fa-thumbs-o-up"></i>Confirm</a>
-				<a class="cancelButton toolButton" onclick="Cancelled()"><i class="fa fa-fw fa-thumbs-o-down"></i>Cancel</a>
+				<a class="confirmButton toolButton"><i class="fa fa-fw fa-thumbs-o-up"></i>Confirm</a>
+				<a class="cancelButton toolButton"><i class="fa fa-fw fa-thumbs-o-down"></i>Cancel</a>
 			</p>
 		</section>
 		<section id="Login" style="display:none">
 			<form id="LoginForm" onsubmit="return false">
 				<p><input id="UsernameField" placeholder="Username" required/></p>
 				<p><input id="PasswordField" placeholder="Password" type="password" required/></p>
-				<p><button onclick="Login()"><i class="fa fa-fw fa-sign-in"></i>Log In</button></p>
+				<p><button class="confirmButton"><i class="fa fa-fw fa-sign-in"></i>Log In</button></p>
 			</form>
 		</section>
-		<section id="NoteManager" style="display:none" class="noneSelected">
+		<section id="NoteManager" style="display:none" data-orig-display="flex" class="noneSelected">
 			<section id="NoteListPane">
 				<section id="User">
 					<span id="WhoAmI"></span>
-					<a id="Logout" class="toolButton" onclick="Logout()" title="Sign out"><i class="fa fa-fw fa-sign-out"></i></a>
-					<a id="EditUser" class="toolButton" onclick="EditUser()" title="Edit user"><i class="fa fa-fw fa-edit"></i></a>
+					<a id="Logout" class="toolButton" title="Sign out"><i class="fa fa-fw fa-sign-out"></i></a>
+					<a id="EditUser" class="toolButton" title="Edit user"><i class="fa fa-fw fa-edit"></i></a>
 				</section>
-				<h2>Notes <i id="NewNoteButton" class="fa fa-fw fa-plus toolButton" onclick="NewNote()" title="New note"></i></h2>
+				<h2>Notes <i id="NewNoteButton" class="fa fa-fw fa-plus toolButton" title="New note"></i></h2>
 				<!-- Search/Filter controls -->
 				<ol id="NoteList"></ol>
-				<p id="NoteListPager">
-					<i class="fa fa-fw fa-arrow-left toolButton" id="PrevPageButton" onclick="PrevPage()"></i>
-					<i class="fa fa-fw fa-arrow-right toolButton" id="NextPageButton" onclick="NextPage()"></i>
-				</p>
 			</section>
-			<section id="NotePane">
+			<section id="NoteEditor">
 				<h1 id="NoteTitleHeading">
-					<a id="BackButton" onclick="SelectNote(null)" style="display:none"><i class="fa fa-fw fa-reply"></i></a>
-					<span id="NoteTitle" contenteditable="true" onblur="SaveNote()"></span>
+					<a id="BackButton"><i class="fa fa-fw fa-reply"></i></a>
+					<span id="NoteTitle" contenteditable="true"></span>
 				</h1>
 				<nav id="ToolBar">
 					<ul id="ToolsList">
-						<li id="SaveButton" class="toolButton" onclick="SaveNote()" title="Save">
+						<li id="SaveButton" class="toolButton" title="Save">
 							<i class="fa fa-fw fa-check save"></i>
 							<div class="loader" style="display: none">
 								<i class="fa fa-fw fa-spinner fa-pulse fa-fw"></i>
 							</div>
 						</li>
-						<li id="SourceButton" class="toolButton" onclick="SwitchSourceView()" title="Switch View">
+						<li id="SourceButton" class="toolButton" title="Switch View">
 							<i class="fa fa-fw fa-code md-mode"></i><i class="fa fa-fw fa-font html-mode"></i>
 						</li>
-						<li id="DeleteButton" class="toolButton" onclick="DeleteNote()" title="Delete note">
+						<li id="DeleteButton" class="toolButton" title="Delete note">
 							<i class="fa fa-fw fa-trash-o"></i>
 						</li>
-						<li id="CopyIDButton" class="toolButton noteIDButton" onclick="CopyNoteID()" title="Click to Copy ID">
+						<li id="CopyIDButton" class="toolButton noteIDButton" title="Click to Copy ID">
 							ID: <span id="NoteID"></span>
 						</li>
 					</ul>
 				</nav>
-				<article id="NoteBody" contenteditable="true" onblur="SaveNote()"></article>
+				<article id="NoteBody" contenteditable="true"></article>
 			</section>
 		</section>
 		<footer id="Footer">
-			Freenote <span id="AppVersion"></span> &copy;2017 <a href="http://adrianprice.us/" target="_blank">Adrian Price</a> &mdash;
-			<a href="https://github.com/aprice/freenote" target="_blank">View on <i class="fa fa-fw fa-github"></i>GitHub</a>
+			Freenote <span id="AppVersion"></span> &mdash; &copy;2017 <a href="http://adrianprice.us/" target="_blank" rel="noopener">Adrian Price</a> &mdash;
+			<a href="https://github.com/aprice/freenote" target="_blank" rel="noopener">View on <i class="fa fa-fw fa-github"></i>GitHub</a>
+			<span id="OfflineMode"></span>
 		</footer>
 		<div id="EditUserModal" style="display:none">
 			<section id="EditUserPanel">
@@ -83,11 +95,32 @@
 					<p><input id="NewPasswordField" placeholder="New Password" type="password" required minlength="8" maxlength="128"/></p>
 					<p><input id="ConfirmPasswordField" placeholder="Confirm Password" type="password" required minlength="8" maxlength="128"/></p>
 					<p>
-						<button onclick="SaveUser()">Save</button>
-						<button onclick="DismissUserModal()">Cancel</button>
+						<button class="confirmButton">Save</button>
+						<button class="cancelButton">Cancel</button>
 					</p>
 				</form>
 			</section>
 		</div>
+		<script type="application/javascript">
+		if ('serviceWorker' in navigator) {
+			console.log("Service worker supported");
+			window.addEventListener('load', function () {
+				console.log("Registering service worker");
+				navigator.serviceWorker.register('worker.js').then(function (registration) {
+					// Registration was successful
+					console.log('ServiceWorker registration successful with scope: ', registration.scope);
+				}, function (err) {
+					// registration failed :(
+					console.log('ServiceWorker registration failed: ', err);
+					window.addEventListener("load", function () {
+						App.init();
+					});
+				});
+				console.log("Registered service worker");
+			});
+		} else {
+			console.log("No service worker support");
+		}
+		</script>
 	</body>
 </html>

@@ -21,7 +21,7 @@
 }
 
 @media (max-width: 40em) {
-	#NotePane {
+	#NoteEditor {
 		border: none;
 	}
 
@@ -30,11 +30,11 @@
 	}
 
 	.noteSelected #BackButton {
-		display: inline-block !important;
+		display: inline-block;
 		padding-right: .5em;
 	}
 
-	.noneSelected #NotePane {
+	.noneSelected #NoteEditor {
 		display: none;
 	}
 

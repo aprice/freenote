@@ -31,6 +31,7 @@ var testConfig = config.Config{
 	BoltDB: testBoltDB,
 }
 
+// TestFirstLoad simulates the initial load of the UI.
 func TestFirstLoad(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
@@ -87,6 +88,7 @@ func TestFirstLoad(t *testing.T) {
 	}
 }
 
+// TestCRUDNote exercises the full note CRUD operations.
 func TestCRUDNote(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
@@ -101,25 +103,24 @@ func TestCRUDNote(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	body, err := ioutil.ReadAll(noteBodyFile)
+	bodyBytes, err := ioutil.ReadAll(noteBodyFile)
 	if err != nil {
 		t.Fatal(err)
 	}
+	body := string(bodyBytes)
 
 	noteHTMLFile, err := os.Open("testdata/cheatsheet.html")
 	if err != nil {
 		t.Fatal(err)
 	}
-	html, err := ioutil.ReadAll(noteHTMLFile)
+	htmlBytes, err := ioutil.ReadAll(noteHTMLFile)
 	if err != nil {
 		t.Fatal(err)
 	}
-	// TODO: Figure out why IDs aren't consistent
-	re := regexp.MustCompile(`(\s+|id="[^"]*")`)
-
+	html := string(htmlBytes)
 	// Create
 	note := notes.Note{Title: "Sample Note"}
-	note.Body = string(body)
+	note.Body = body
 	b, err := json.Marshal(note)
 	if err != nil {
 		t.Fatal(err)
@@ -140,14 +141,14 @@ func TestCRUDNote(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expected := re.ReplaceAllString(string(body), " ")
-	actual := re.ReplaceAllString(note.Body, " ")
+	expected := body
+	actual := note.Body
 	if actual != expected {
 		t.Errorf("Markdown does not match expected value.\nExpected:\n%q\n-------\nActual:\n%q\n",
 			expected, actual)
 	}
-	expected = re.ReplaceAllString(string(html), " ")
-	actual = re.ReplaceAllString(note.HTMLBody, " ")
+	expected = normalizeHTML(html)
+	actual = normalizeHTML(note.HTMLBody)
 	if actual != expected {
 		t.Errorf("HTML does not match expected value.\nExpected:\n%q\n-------\nActual:\n%q\n",
 			expected, actual)
@@ -168,14 +169,14 @@ func TestCRUDNote(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expected = re.ReplaceAllString(string(body), " ")
-	actual = re.ReplaceAllString(note.Body, " ")
+	expected = body
+	actual = note.Body
 	if actual != expected {
 		t.Errorf("Markdown does not match expected value.\nExpected:\n%q\n-------\nActual:\n%q\n",
 			expected, actual)
 	}
-	expected = re.ReplaceAllString(string(html), " ")
-	actual = re.ReplaceAllString(note.HTMLBody, " ")
+	expected = normalizeHTML(html)
+	actual = normalizeHTML(note.HTMLBody)
 	if actual != expected {
 		t.Errorf("HTML does not match expected value.\nExpected:\n%q\n-------\nActual:\n%q\n",
 			expected, actual)
@@ -205,14 +206,14 @@ func TestCRUDNote(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expected = re.ReplaceAllString(string(body), " ")
-	actual = re.ReplaceAllString(note.Body, " ")
+	expected = body
+	actual = note.Body
 	if actual != expected {
 		t.Errorf("Markdown does not match expected value.\nExpected:\n%q\n-------\nActual:\n%q\n",
 			expected, actual)
 	}
-	expected = re.ReplaceAllString(string(html), " ")
-	actual = re.ReplaceAllString(note.HTMLBody, " ")
+	expected = normalizeHTML(html)
+	actual = normalizeHTML(note.HTMLBody)
 	if actual != expected {
 		t.Errorf("HTML does not match expected value.\nExpected:\n%q\n-------\nActual:\n%q\n",
 			expected, actual)
@@ -236,6 +237,19 @@ func TestCRUDNote(t *testing.T) {
 	if w.Code != http.StatusNotFound && w.Code != http.StatusGone {
 		t.Fatalf("Server responded %d: %s", w.Code, truncate(w.Body.String(), 50))
 	}
+}
+
+// TODO: Figure out why IDs aren't consistent
+var normalizeSpaces = regexp.MustCompile(`(?ms)\s+`)
+var normalizeIDs = regexp.MustCompile(`(?i)\s+id="[^"]*"\s*`)
+var normalizeTags = regexp.MustCompile(`>\s+<`)
+
+func normalizeHTML(in string) string {
+	in = strings.TrimSpace(in)
+	in = normalizeIDs.ReplaceAllString(in, " ")
+	in = normalizeSpaces.ReplaceAllString(in, " ")
+	in = normalizeTags.ReplaceAllString(in, "><")
+	return in
 }
 
 func setupTest() (userID uuid.UUID, server *Server, err error) {

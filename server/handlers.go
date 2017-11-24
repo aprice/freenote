@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	uuid "github.com/satori/go.uuid"
 
@@ -327,10 +328,19 @@ func (rh *requestHandler) doNotes(w http.ResponseWriter, r *http.Request) {
 			SortDescending: true,
 		}
 		pageReq.FromQueryString(r.URL, []string{"modified", "title", "created"})
+		modifiedSince := time.Time{}
+		if msRaw := r.URL.Query().Get("modifiedSince"); msRaw != "" {
+			modifiedSince, err = time.Parse(time.RFC3339, msRaw)
+			if badRequest(w, err) {
+				return
+			}
+		}
+
 		q := store.NoteQuery{
-			Owner:  rh.owner.ID,
-			Page:   pageReq,
-			Folder: folderPath,
+			Owner:         rh.owner.ID,
+			Page:          pageReq,
+			Folder:        folderPath,
+			ModifiedSince: modifiedSince,
 		}
 		list, total, err = rh.db.NoteStore().QueryNotes(q)
 		if handleError(w, err) {
@@ -414,7 +424,7 @@ func (rh *requestHandler) doNote(w http.ResponseWriter, r *http.Request) {
 		if err = parseRequest(r, note); badRequest(w, err) {
 			return
 		}
-		if note.ID != note.ID {
+		if noteID != note.ID {
 			// No fuckery allowed
 			http.Error(w, "Bad Request: cant't change ID", http.StatusBadRequest)
 			return

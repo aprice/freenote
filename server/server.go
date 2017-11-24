@@ -120,7 +120,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	switch path {
 	case "session", "users":
-		rh, err := NewRequestHandler(r, s.conf, s.sanitizer)
+		rh, err := newRequestHandler(r, s.conf, s.sanitizer)
 		if err != nil {
 			if handleError(w, err) {
 				return

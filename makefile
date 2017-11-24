@@ -120,11 +120,11 @@ report: check
 gen:
 	echo "Version=\"$(VERSION)\";" > "$(PKGDIR)/web/version.js"
 	$(GOGEN) $(PKG)
-build: gen $(CMDS)
-$(CMDS): setup-dirs dep
+build: $(CMDS)
+$(CMDS): gen setup-dirs dep
 	$(GOBUILD) "$(CMDPKG)/$@" | tee "$(RPTDIR)/build-$@.out"
-install: gen $(INSTALL_TARGETS)
-$(INSTALL_TARGETS):
+install: $(INSTALL_TARGETS)
+$(INSTALL_TARGETS): gen
 	$(GOINSTALL) "$(CMDPKG)/$(subst install-,,$@)"
 
 dist: build

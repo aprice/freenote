@@ -95,10 +95,7 @@ func authorize(path string, user users.User) bool {
 		//TODO: Sharing!
 		return false
 	} else if path == "/users/" || path == "/users" {
-		if user.Access >= users.LevelAdmin {
-			return true
-		}
-		return false
+		return user.Access >= users.LevelAdmin
 	}
 	return true
 }

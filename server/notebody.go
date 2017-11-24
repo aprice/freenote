@@ -1,32 +1,52 @@
 package server
 
 import (
+	"strings"
+
 	"github.com/lunny/html2md"
 	"github.com/microcosm-cc/bluemonday"
-	"github.com/russross/blackfriday"
+	blackfriday "gopkg.in/russross/blackfriday.v2"
 
 	"github.com/aprice/freenote/notes"
 )
 
 var bfRender blackfriday.Renderer
 var bfExt = 0 |
-	blackfriday.EXTENSION_NO_INTRA_EMPHASIS |
-	blackfriday.EXTENSION_TABLES |
-	blackfriday.EXTENSION_FENCED_CODE |
-	blackfriday.EXTENSION_AUTOLINK |
-	blackfriday.EXTENSION_STRIKETHROUGH |
-	blackfriday.EXTENSION_SPACE_HEADERS |
-	blackfriday.EXTENSION_AUTO_HEADER_IDS |
-	blackfriday.EXTENSION_BACKSLASH_LINE_BREAK |
-	blackfriday.EXTENSION_DEFINITION_LISTS
+	blackfriday.NoIntraEmphasis |
+	blackfriday.Tables |
+	blackfriday.FencedCode |
+	blackfriday.Autolink |
+	blackfriday.Strikethrough |
+	blackfriday.SpaceHeadings |
+	blackfriday.HeadingIDs |
+	blackfriday.AutoHeadingIDs |
+	blackfriday.BackslashLineBreak |
+	blackfriday.DefinitionLists
 
 func init() {
 	var bfFlags = 0 |
-		blackfriday.HTML_NOFOLLOW_LINKS |
-		blackfriday.HTML_SAFELINK |
-		blackfriday.HTML_HREF_TARGET_BLANK |
-		blackfriday.HTML_FOOTNOTE_RETURN_LINKS
-	bfRender = blackfriday.HtmlRenderer(bfFlags, "", "")
+		blackfriday.UseXHTML |
+		blackfriday.NofollowLinks |
+		blackfriday.Safelink |
+		blackfriday.HrefTargetBlank |
+		blackfriday.FootnoteReturnLinks
+
+	bfRender = blackfriday.NewHTMLRenderer(blackfriday.HTMLRendererParameters{
+		Flags: bfFlags,
+	})
+
+	html2md.AddRule("pre", &html2md.Rule{
+		Patterns: []string{"pre"},
+		Replacement: func(innerHTML string, attrs []string) string {
+			body := strings.TrimSpace(innerHTML)
+			if !strings.HasPrefix(body, "<code>") {
+				return innerHTML
+			}
+			body = strings.TrimPrefix(body, "<code>")
+			body = strings.TrimSuffix(body, "</code>")
+			return "\n\n```" + body + "```\n"
+		},
+	})
 }
 
 func ensureMarkdownBody(note *notes.Note, p *bluemonday.Policy) {
@@ -37,7 +57,7 @@ func ensureMarkdownBody(note *notes.Note, p *bluemonday.Policy) {
 
 func ensureHTMLBody(note *notes.Note, p *bluemonday.Policy) {
 	if note.HTMLBody == "" && note.Body != "" {
-		raw := blackfriday.MarkdownOptions([]byte(note.Body), bfRender, blackfriday.Options{Extensions: bfExt})
+		raw := blackfriday.Run([]byte(note.Body), blackfriday.WithRenderer(bfRender), blackfriday.WithExtensions(bfExt))
 		note.HTMLBody = string(p.SanitizeBytes(raw))
 	}
 }

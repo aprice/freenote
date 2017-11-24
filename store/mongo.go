@@ -80,6 +80,9 @@ func (s *MongoNoteStore) NoteByID(id uuid.UUID) (notes.Note, error) {
 	return result, mongoError(err)
 }
 
+// QueryNotes queries the collection of notes with the parameters given in query,
+// and returns the requested page of notes, the total notes matching the query
+// (ignoring pagination), and any error encountered.
 func (s *MongoNoteStore) QueryNotes(query NoteQuery) ([]notes.Note, int, error) {
 	result := []notes.Note{}
 	qry := bson.M{}
@@ -91,6 +94,9 @@ func (s *MongoNoteStore) QueryNotes(query NoteQuery) ([]notes.Note, int, error) 
 	}
 	if query.Tag != "" {
 		qry["tags"] = query.Tag
+	}
+	if query.ModifiedSince.After(epoch) {
+		qry["modified"] = bson.M{"$gt": query.ModifiedSince}
 	}
 	if query.Text != "" {
 		//TODO: Full text search

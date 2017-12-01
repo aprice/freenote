@@ -61,4 +61,35 @@ var App = {
 
 window.addEventListener("load", function () {
 	App.init();
+	var om = $id('OfflineMode');
+	if (DataStore.hasOffline) {
+		om.innerHTML = " &mdash; Available Offline";
+	} else {
+		om.innerHTML = "";
+	}
+	if (navigator.storageQuota) {
+		navigator.storageQuota.queryInfo("temporary").then(function (info) {
+			om.title = Math.round(info.usage / 1024) + "/" + Math.round(info.quota / 1024) + " KB used";
+		});
+	} else if (navigator.webkitTemporaryStorage) {
+		navigator.webkitTemporaryStorage.queryUsageAndQuota(function (usedBytes, grantedBytes) {
+			om.title = Math.round(usedBytes / 1024) + "/" + Math.round(grantedBytes / 1024) + " KB used";
+		});
+	}
+
+	window.addEventListener("online", function() {
+		if (DataStore.hasOffline) {
+			om.innerHTML = " &mdash; Available Offline";
+		} else {
+			om.innerHTML = "";
+		}
+	});
+
+	window.addEventListener("offline", function() {
+		if (DataStore.hasOffline) {
+			om.innerHTML = " &mdash; Working Offline";
+		} else {
+			om.innerHTML = " &mdash; Offline";
+		}
+	});
 });

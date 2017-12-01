@@ -14,6 +14,7 @@ var IndexedDBDataStore = {
 	//syncFrequency: 1 * 60 * 1000,
 	syncFrequency: 5 * 1000,
 	syncInterval: null,
+	hasOffline: true,
 
 	init: function() {
 		var self = this;
@@ -75,7 +76,7 @@ var IndexedDBDataStore = {
 			};
 
 			request.onerror = function () {
-				resolve(RESTDataStore.getNote(id));
+				RESTDataStore.getNote(id).then(resolve,reject);
 			};
 		});
 	},
@@ -243,6 +244,8 @@ var IndexedDBDataStore = {
 };
 
 var RESTDataStore = {
+	hasOffline: false,
+
 	init: function() {
 
 	},
@@ -300,19 +303,6 @@ RESTDataStore.init();
 var DataStore = IndexedDBDataStore;
 if (window.indexedDB) {
 	IndexedDBDataStore.init();
-	window.addEventListener('load', function () {
-		var om = document.getElementById('OfflineMode');
-		om.innerHTML = " &mdash; Available Offline";
-		if (navigator.storageQuota) {
-			navigator.storageQuota.queryInfo("temporary").then(function (info) {
-				om.title = Math.round(info.usage / 1024) + "/" + Math.round(info.quota / 1024) + " KB used";
-			});
-		} else if (navigator.webkitTemporaryStorage) {
-			navigator.webkitTemporaryStorage.queryUsageAndQuota(function (usedBytes, grantedBytes) {
-				om.title = Math.round(usedBytes / 1024) + "/" + Math.round(grantedBytes / 1024) + " KB used";
-			});
-		}
-	});
 } else {
 	console.log("IndexDB not supported, offline storage disabled");
 	DataStore = RESTDataStore;

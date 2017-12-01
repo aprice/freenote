@@ -44,18 +44,11 @@ function restRequest(options) {
 				}
 				resolve(payload);
 			} else {
-				reject({
-					status: this.status,
-					statusText: r.statusText
-				});
+				reject(new Error(this.status + ": " + r.statusText));
 			}
 		};
 		r.onerror = function () {
-			reject({
-				status: this.status,
-				statusText: r.statusText,
-				responseText: r.responseText,
-			});
+			reject(new Error(this.status + ": " + r.statusText + ": " + r.responseText))
 		};
 		if (options.headers) {
 			Object.keys(options.headers).forEach(function (key) {

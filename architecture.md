@@ -99,15 +99,16 @@ versions of all mainstream browsers on desktop and mobile. Modern browsers are
 getting much better at standards compliance and cross-browser compatibility,
 which means we get the advantage of modern features. So the basic rule of thumb
 for any core functionality is any feature must be supported by Firefox, Chrome,
-and Safari versions at least 6 months old, without vendor prefixes.
+and Safari versions at least 6 months old, without vendor prefixes. Any less
+broadly supported feature must degrade completely transparently when not
+available.
 
 The UI design is fully responsive and adaptive based on state (identified by
 classes) and media. It's progressive, supporting offline access from IndexedDB
 and Web Cache, and uses a Service Worker to manage content caching.
 
 The UI is relatively slim, coming in at under 250kB before minification and
-compression (under 200kB after), including 140kB of font files, allowing for
-load times on the order of 500ms.
+compression (under 200kB after), allowing for load times on the order of 500ms.
 
 ### UI Architecture
 
